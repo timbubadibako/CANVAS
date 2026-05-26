@@ -4,7 +4,7 @@ Dokumen ini berfungsi sebagai papan pelacak progres pengerjaan proyek CANVAS yan
 
 ---
 
-## 📅 FASE 1: Foundation, Data Engineering & Mobile Boilerplate
+## 📅 FASE 1: Foundation, Data Engineering & Mobile Boilerplate (PROGRESS: 85%)
 **Fokus Utama:** Menyiapkan infrastruktur database, reduksi dataset 180 GB, dan membangun kerangka dasar (boilerplate) aplikasi Flutter.
 
 ### 1. Backend & Database Setup (Supabase)
@@ -19,15 +19,16 @@ Dokumen ini berfungsi sebagai papan pelacak progres pengerjaan proyek CANVAS yan
 - [ ] Kelompokkan metadata anotasi berat, kalori, dan makronutrien dari USDA database ke format file `.csv` siap latih.
 
 ### 3. Mobile Frontend Setup (Flutter)
-- [ ] Inisialisasi proyek Flutter menggunakan perintah `flutter create --org com.timbubadibako .` di dalam folder repo.
-- [ ] Susun struktur folder paket sesuai panduan `PROJECT_ARCHITECTURE.md`.
-- [ ] Pasang dependensi utama di `pubspec.yaml` (`flutter_bloc`, `supabase_flutter`, `camera`, `http`).
-- [ ] Buat halaman `LoginScreen` dan `RegisterScreen` dasar.
-- [ ] Implementasikan `AuthBloc` untuk memanajemeni token sesi login via Supabase Auth.
+- [x] Inisialisasi proyek Flutter menggunakan Clean Architecture.
+- [x] Susun struktur folder paket sesuai panduan `PROJECT_ARCHITECTURE.md`.
+- [x] Pasang dependensi utama di `pubspec.yaml` (`flutter_bloc`, `supabase_flutter`, `camera`, `http`, `lucide_icons`, `google_fonts`, `image_picker`).
+- [x] Implementasi **Artistic Studio Theme** (Poppins/Open Sans, Dark & Light Ready).
+- [x] Buat halaman `LoginScreen` dan `RegisterScreen` dengan transisi side-by-side artistik.
+- [ ] Implementasikan `AuthBloc` untuk memanajemeni token sesi login via Supabase Auth (UI Ready, Logic Pending).
 
 ---
 
-## 📅 FASE 2: Model Training, API Gateway & Core UI Integration
+## 📅 FASE 2: Model Training, API Gateway & Core UI Integration (PROGRESS: 40%)
 **Fokus Utama:** Melatih model AI multi-task regressor, mendeploy API FastAPI, dan menghubungkan core scanner kamera di Flutter.
 
 ### 1. Model Training & Export (AI Sub-Team)
@@ -43,16 +44,18 @@ Dokumen ini berfungsi sebagai papan pelacak progres pengerjaan proyek CANVAS yan
 - [ ] Deploy server FastAPI ke cloud provider (RunPod / Hugging Face Spaces).
 
 ### 3. Core Mobile Integration (Flutter Integration)
-- [ ] Bangun halaman `DashboardScreen` dengan visualisasi ringkasan gizi harian.
-- [ ] Implementasikan `CameraBloc` untuk mengontrol siklus hidup kamera di `CameraScannerScreen`.
-- [ ] Buat overlay grafik *bounding box* target piring pada widget kamera.
-- [ ] Implementasikan `ScannerBloc` untuk menangani Online Mode (kirim file jepretan foto via HTTP POST ke server FastAPI).
+- [x] Bangun halaman `DashboardScreen` dengan visualisasi ringkasan gizi harian & animasi brush accents.
+- [x] Bangun halaman `MealDiaryScreen` dengan konsep "Layers" & fungsional filter.
+- [x] Implementasikan fungsionalitas UI `CameraScannerScreen` (UI Live Camera Ready).
+- [ ] Implementasikan `CameraBloc` untuk mengontrol siklus hidup kamera.
+- [x] Buat overlay grafik *organic frame* target piring pada widget kamera.
+- [ ] Implementasikan `ScannerBloc` untuk menangani Online Mode.
 - [ ] Buat widget `NutritionFactsCard` untuk menampilkan data JSON hasil respons AI.
 - [ ] Sambungkan fungsi tombol "Simpan ke Diary" untuk mengunggah entri log makanan ke tabel `food_logs` Supabase.
 
 ---
 
-## 📅 FASE 3: Optimization, Offline Mode & Future Features
+## 📅 FASE 3: Optimization, Offline Mode & Future Features (PROGRESS: 20%)
 **Fokus Utama:** Memperluas kapabilitas aplikasi dengan On-Device AI lokal dan meluncurkan fitur pelacakan berat badan harian.
 
 ### 1. In-App Download Manager & Local Inference (Offline Mode)
@@ -61,10 +64,12 @@ Dokumen ini berfungsi sebagai papan pelacak progres pengerjaan proyek CANVAS yan
 - [ ] Integrasikan library `onnxruntime_flutter` untuk memuat model hasil unduhan ke memori lokal HP.
 - [ ] Terapkan arsitektur `Dart Isolates` (`background_isolate.dart`) agar proses inferensi gambar lokal tidak memicu UI lag.
 - [ ] Sempurnakan logika `ScannerBloc` agar bisa melakukan *switching* otomatis ke lokal engine saat kuota mati atau offline mode aktif.
-- [ ] Implementasikan panduan UI *Multi-Angle Prompt* untuk menyarankan user mengambil 2 foto tambahan (sudut 30° & 60°) jika menggunakan kamera ponsel standar.
+- [x] Implementasikan panduan UI *Multi-Angle Prompt* (30° & 60°) dengan animasi notifikasi kustom.
 
 ### 2. Fitness Progression Features (List Masa Depan)
-- [ ] Buat halaman `ProfilesScreen` untuk memperbarui data target fisik dan tujuan diet (*bulking/cutting*).
+- [x] Buat halaman `ProfilesScreen` (Full functional edit, avatar mgt, account reveal, studio settings).
+- [x] Implementasikan alur **Onboarding Preferences** (5-Step Journey: Goal, Stats, Dietary, Strategy, Motivation).
+- [x] Buat layar **Stats Analytics** dengan grafik mingguan & nutritional balance.
 - [ ] Bangun modul UI *Weight Tracker* harian.
 - [ ] Hubungkan input berat badan ke tabel `weight_logs` Supabase.
-- [ ] Buat grafik tren fluktuasi berat badan mingguan di Dashboard.
+- [x] Implementasi sistem **StudioToast** notification di pojok kanan atas.
