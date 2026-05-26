@@ -3,12 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/studio_toast.dart';
+import '../../data/datasources/gemini_client.dart';
 import '../screens/dashboard_screen.dart';
 import '../screens/meal_diary_screen.dart';
 import '../screens/ai_scanner_screen.dart';
 import '../screens/stats_screen.dart';
 import '../screens/profile_screen.dart';
 import '../bloc/theme_cubit.dart';
+import '../bloc/auth/auth_bloc.dart';
+import '../bloc/profile/profile_bloc.dart';
+import '../../core/utils/bot_prompt_decorator.dart';
 
 class MainNavWrapper extends StatefulWidget {
   const MainNavWrapper({super.key});
@@ -17,7 +22,8 @@ class MainNavWrapper extends StatefulWidget {
   State<MainNavWrapper> createState() => _MainNavWrapperState();
 }
 
-class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStateMixin {
+class _MainNavWrapperState extends State<MainNavWrapper>
+    with TickerProviderStateMixin {
   int _currentIndex = 0;
   int _previousIndex = 0;
 
@@ -32,7 +38,10 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
   // Chat Data
   final TextEditingController _chatController = TextEditingController();
   final List<Map<String, dynamic>> _messages = [
-    {'text': 'Hello Artist! How can I help with your masterpiece today?', 'isBot': true},
+    {
+      'text': 'Hello Artist! How can I help with your masterpiece today?',
+      'isBot': true,
+    },
   ];
 
   @override
@@ -42,73 +51,89 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
       duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
-
     _chatRoomController = AnimationController(
       duration: const Duration(milliseconds: 500),
       vsync: this,
     );
 
-    print("[StudioBot] Initialized. Triggering reminder in 3s...");
     Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) _triggerBotNotification("Don't forget to paint your Lunch log!");
+      if (mounted)
+        _triggerBotNotification("Don't forget to paint your Lunch log!");
     });
   }
 
   void _triggerBotNotification(String message) {
-    print("[StudioBot] Notification triggered: $message");
     setState(() {
       _hasNotification = true;
       _activeReminder = message;
     });
     _shakeController.repeat(reverse: true);
-    
     Future.delayed(const Duration(seconds: 5), () {
-      if (mounted && _activeReminder != null) {
-        print("[StudioBot] Reminder bubble auto-hidden.");
+      if (mounted && _activeReminder != null)
         setState(() => _activeReminder = null);
-      }
     });
   }
 
   void _onBotPressed() {
-    print("[StudioBot] Pressed. Notification State: $_hasNotification, Chat Open: $_isChatOpen");
     if (_hasNotification) {
       setState(() {
         _hasNotification = false;
         _shakeController.stop();
         _shakeController.reset();
-        _activeReminder = _activeReminder == null ? "I'm ready for your questions!" : null;
+        _activeReminder = _activeReminder == null
+            ? "I'm ready for your questions!"
+            : null;
       });
+    } else if (_isChatOpen) {
+      _sendMessage();
     } else {
       setState(() {
-        _isChatOpen = !_isChatOpen;
-        if (_isChatOpen) {
-          _chatRoomController.forward();
-        } else {
-          _chatRoomController.reverse();
-        }
+        _isChatOpen = true;
+        _chatRoomController.forward();
       });
     }
   }
 
   void _sendMessage() async {
     if (_chatController.text.isEmpty) return;
+    final rawUserText = _chatController.text;
 
-    final userText = _chatController.text;
-    print("[StudioBot] Message sent: $userText");
+    // 1. Ambil profile dari Bloc (misal state-nya loaded)
+    final profileState = context.read<ProfileBloc>().state;
+    String finalPrompt = rawUserText;
+  
+    if (profileState is ProfileLoaded) {
+    // 2. Bungkus pesan dengan konteks gizi
+    finalPrompt = BotPromptDecorator.decorate(rawUserText, profileState.profile);
+    }
+  
+    // 3. Kirim prompt yang sudah kaya data ke Gemini
+
     setState(() {
-      _messages.add({'text': userText, 'isBot': false});
+      _messages.add({'text': rawUserText, 'isBot': false});
       _chatController.clear();
       _isBotThinking = true;
     });
 
-    await Future.delayed(const Duration(seconds: 2));
-    if (mounted) {
-      print("[StudioBot] Bot responding...");
-      setState(() {
-        _isBotThinking = false;
-        _messages.add({'text': 'Perfect! Tracking your $userText now. Keep creating!', 'isBot': true});
-      });
+    
+    try {
+      final response = await GeminiClient().getChatResponse(finalPrompt);
+      if (mounted) {
+        setState(() {
+          _isBotThinking = false;
+          _messages.add({'text': response, 'isBot': true});
+        });
+      }
+    } catch (e) {
+      print("[StudioBot] Gemini API Error: $e"); // Log error detail
+      if (mounted) {
+        setState(() => _isBotThinking = false);
+        StudioToast.show(
+          context,
+          'STUDIO OFFLINE: $e',
+          icon: LucideIcons.wifiOff,
+        );
+      }
     }
   }
 
@@ -134,8 +159,14 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
         final bool isDark = themeMode == ThemeMode.dark;
         final bool isScannerActive = _currentIndex == 2;
 
+        final double keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+        final bool isKeyboardOpen = keyboardHeight > 0;
+        final double botBottomPos = isKeyboardOpen
+            ? (keyboardHeight + 12)
+            : 128;
+
         final List<Widget> screens = [
-          const DashboardScreen(),
+          DashboardScreen(onNavigateToTab: _setIndex),
           const MealDiaryScreen(),
           AIScannerScreen(onBackToHome: () => _setIndex(_previousIndex)),
           const StatsScreen(),
@@ -143,7 +174,7 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
         ];
 
         return PopScope(
-          canPop: _currentIndex == 0 && !_isChatOpen, 
+          canPop: _currentIndex == 0 && !_isChatOpen,
           onPopInvokedWithResult: (didPop, result) {
             if (didPop) return;
             if (_isChatOpen) {
@@ -152,23 +183,25 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
                 _chatRoomController.reverse();
               });
             } else if (_currentIndex != 0) {
-              _setIndex(0); 
+              _setIndex(0);
             }
           },
           child: Scaffold(
+            resizeToAvoidBottomInset: false,
             extendBody: true,
             body: Stack(
               children: [
                 screens[_currentIndex],
                 if (!isScannerActive) ...[
-                  _buildChatOverlay(isDark),
-                  if (_activeReminder != null) _buildReminderBubble(isDark),
-                  _buildFloatingBot(isDark),
-                ]
+                  _buildChatOverlay(isDark, botBottomPos),
+                  if (_activeReminder != null)
+                    _buildReminderBubble(isDark, botBottomPos),
+                  _buildFloatingBot(isDark, botBottomPos),
+                ],
               ],
             ),
-            bottomNavigationBar: isScannerActive 
-                ? const SizedBox.shrink() 
+            bottomNavigationBar: isScannerActive
+                ? const SizedBox.shrink()
                 : _buildBottomNav(isDark),
           ),
         );
@@ -176,16 +209,21 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
     );
   }
 
-  Widget _buildFloatingBot(bool isDark) {
-    return Positioned(
-      bottom: 144, 
-      right: 28,
+  Widget _buildFloatingBot(bool isDark, double bottomPos) {
+    return AnimatedPositioned(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOutQuart,
+      bottom: bottomPos+12,
+      right: 32,
       child: AnimatedBuilder(
         animation: _shakeController,
         builder: (context, child) {
-          final double shake = _hasNotification ? math.sin(_shakeController.value * math.pi * 2) * 2 : 0;
-          final double rotate = _hasNotification ? math.sin(_shakeController.value * math.pi * 2) * 0.05 : 0;
-          
+          final double shake = _hasNotification
+              ? math.sin(_shakeController.value * math.pi * 2) * 2
+              : 0;
+          final double rotate = _hasNotification
+              ? math.sin(_shakeController.value * math.pi * 2) * 0.05
+              : 0;
           return Transform.translate(
             offset: Offset(shake, shake / 4),
             child: Transform.rotate(
@@ -197,39 +235,54 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
                     onTap: _onBotPressed,
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 300),
-                      height: 64, width: 64,
+                      height: 56,
+                      width: 56,
                       decoration: BoxDecoration(
-                        gradient: AppColors.paintGradient,
+                        gradient: AppColors.emeraldGradient,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.studioIndigo.withValues(alpha: 0.3),
-                            blurRadius: 15, offset: const Offset(0, 8),
-                          )
+                            color: AppColors.vibrantEmerald.withValues(
+                              alpha: 0.3,
+                            ),
+                            blurRadius: 15,
+                            offset: const Offset(0, 8),
+                          ),
                         ],
-                        border: Border.all(color: isDark ? AppColors.deepSlate : Colors.white, width: 4),
+                        border: Border.all(
+                          color: isDark
+                              ? AppColors.vibrantEmerald
+                              : Colors.white,
+                          width: 1,
+                        ),
                       ),
                       child: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 300),
-                        transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
+                        transitionBuilder: (child, animation) =>
+                            ScaleTransition(scale: animation, child: child),
                         child: Icon(
-                          _isChatOpen ? LucideIcons.send : LucideIcons.bot, 
+                          _isChatOpen ? LucideIcons.send : LucideIcons.bot,
                           key: ValueKey<bool>(_isChatOpen),
-                          color: Colors.white, 
-                          size: 28
+                          color: Colors.white,
+                          size: 28,
                         ),
                       ),
                     ),
                   ),
                   if (_hasNotification && !_isChatOpen)
                     Positioned(
-                      top: 2, right: 2,
+                      top: 2,
+                      right: 2,
                       child: Container(
-                        height: 14, width: 14,
+                        height: 14,
+                        width: 14,
                         decoration: BoxDecoration(
                           color: AppColors.deepRose,
                           shape: BoxShape.circle,
-                          border: Border.all(color: isDark ? AppColors.deepSlate : Colors.white, width: 2.5),
+                          border: Border.all(
+                            color: isDark ? AppColors.deepSlate : Colors.white,
+                            width: 2.5,
+                          ),
                         ),
                       ),
                     ),
@@ -242,11 +295,12 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
     );
   }
 
-  Widget _buildReminderBubble(bool isDark) {
-    if (_isChatOpen) return const SizedBox.shrink(); 
-    
-    return Positioned(
-      bottom: 220, 
+  Widget _buildReminderBubble(bool isDark, double botBottomPos) {
+    if (_isChatOpen) return const SizedBox.shrink();
+    return AnimatedPositioned(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+      bottom: botBottomPos + 76,
       right: 28,
       child: TweenAnimationBuilder<double>(
         tween: Tween(begin: 0.0, end: 1.0),
@@ -259,7 +313,10 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
               scale: value.clamp(0.0, 1.0),
               alignment: Alignment.bottomRight,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 14,
+                ),
                 decoration: BoxDecoration(
                   color: isDark ? AppColors.slateCard : Colors.white,
                   borderRadius: const BorderRadius.only(
@@ -268,12 +325,18 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
                     bottomLeft: Radius.circular(24),
                     bottomRight: Radius.circular(4),
                   ),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 20)],
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 20,
+                    ),
+                  ],
                 ),
                 child: Text(
                   _activeReminder!,
                   style: TextStyle(
-                    fontSize: 12, fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
                     color: isDark ? Colors.white : AppColors.lightText,
                   ),
                 ),
@@ -285,26 +348,35 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
     );
   }
 
-  Widget _buildChatOverlay(bool isDark) {
-    return Positioned(
-      bottom: 144, 
+  Widget _buildChatOverlay(bool isDark, double bottomPos) {
+    return AnimatedPositioned(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+      bottom: bottomPos,
       right: 28,
       child: ScaleTransition(
         scale: CurvedAnimation(
           parent: _chatRoomController,
-          curve: Curves.easeOutQuart,
+          curve: Curves.easeOut,
         ),
         alignment: Alignment.bottomRight,
         child: FadeTransition(
           opacity: _chatRoomController,
           child: Container(
-            width: MediaQuery.of(context).size.width - 56,
-            height: 640,
+            width: MediaQuery.of(context).size.width - 64,
+            height: 592,
             decoration: BoxDecoration(
               color: isDark ? AppColors.deepSlate : Colors.white,
               borderRadius: BorderRadius.circular(40),
-              border: Border.all(color: AppColors.studioIndigo.withValues(alpha: 0.3)),
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 40)],
+              border: Border.all(
+                color: AppColors.vibrantEmerald.withValues(alpha: 0.3),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  blurRadius: 40,
+                ),
+              ],
             ),
             child: Column(
               children: [
@@ -312,9 +384,20 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
                   padding: const EdgeInsets.all(24),
                   child: Row(
                     children: [
-                      const Icon(LucideIcons.bot, color: AppColors.studioIndigo, size: 20),
+                      const Icon(
+                        LucideIcons.bot,
+                        color: AppColors.vibrantEmerald,
+                        size: 20,
+                      ),
                       const SizedBox(width: 12),
-                      const Text('STUDIO ASSISTANT', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1.2)),
+                      const Text(
+                        'STUDIO ASSISTANT',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 11,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
                       const Spacer(),
                       IconButton(
                         onPressed: () {
@@ -322,8 +405,8 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
                             _isChatOpen = false;
                             _chatRoomController.reverse();
                           });
-                        }, 
-                        icon: const Icon(LucideIcons.x, size: 16)
+                        },
+                        icon: const Icon(LucideIcons.x, size: 16),
                       ),
                     ],
                   ),
@@ -337,7 +420,11 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
                         return _buildThinkingBubble(isDark);
                       }
                       final msg = _messages[index];
-                      return _buildChatBubble(msg['text'], msg['isBot'], isDark);
+                      return _buildChatBubble(
+                        msg['text'],
+                        msg['isBot'],
+                        isDark,
+                      );
                     },
                   ),
                 ),
@@ -347,13 +434,26 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
                     controller: _chatController,
                     maxLines: 5,
                     minLines: 1,
-                    style: TextStyle(fontSize: 13, color: isDark ? Colors.white : AppColors.lightText),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark ? Colors.white : AppColors.lightText,
+                    ),
                     decoration: InputDecoration(
                       hintText: 'Ask the Studio...',
                       filled: true,
-                      fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
-                      contentPadding: const EdgeInsets.only(left: 20, top: 14, bottom: 14, right: 32),
+                      fillColor: isDark
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : Colors.black.withValues(alpha: 0.05),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.only(
+                        left: 20,
+                        top: 14,
+                        bottom: 14,
+                        right: 32,
+                      ),
                     ),
                     onSubmitted: (_) => _sendMessage(),
                   ),
@@ -370,16 +470,20 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
-        mainAxisAlignment: isBot ? MainAxisAlignment.start : MainAxisAlignment.end,
+        mainAxisAlignment: isBot
+            ? MainAxisAlignment.start
+            : MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Flexible(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: isBot 
-                  ? (isDark ? AppColors.slateCard : Colors.black.withValues(alpha: 0.05))
-                  : AppColors.studioIndigo,
+                color: isBot
+                    ? (isDark
+                          ? AppColors.slateCard
+                          : Colors.black.withValues(alpha: 0.05))
+                    : AppColors.vibrantEmerald,
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(20),
                   topRight: const Radius.circular(20),
@@ -390,8 +494,11 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
               child: Text(
                 text,
                 style: TextStyle(
-                  fontSize: 13, fontWeight: FontWeight.w600,
-                  color: isBot ? (isDark ? Colors.white : AppColors.lightText) : Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: isBot
+                      ? (isDark ? Colors.white : AppColors.lightText)
+                      : Colors.white,
                 ),
               ),
             ),
@@ -409,10 +516,15 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: isDark ? AppColors.slateCard : Colors.black.withValues(alpha: 0.05),
+              color: isDark
+                  ? AppColors.slateCard
+                  : Colors.black.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: const Text('...', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text(
+              '...',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -422,18 +534,30 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
   Widget _buildBottomNav(bool isDark) {
     return Container(
       margin: const EdgeInsets.only(bottom: 24, left: 24, right: 24),
-      height: 84, 
+      height: 84,
       decoration: BoxDecoration(
-        color: (isDark ? AppColors.deepSlate : Colors.white).withValues(alpha: 0.95),
+        color: (isDark ? AppColors.deepSlate : Colors.white).withValues(
+          alpha: 0.95,
+        ),
         borderRadius: BorderRadius.circular(40),
-        border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.indigo.withValues(alpha: 0.1)),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.08), blurRadius: 30, offset: const Offset(0, 10))],
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.08)
+              : Colors.indigo.withValues(alpha: 0.1),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.08),
+            blurRadius: 30,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Row(
         children: [
           _buildExpandedNavItem(0, LucideIcons.home, 'Home', isDark),
           _buildExpandedNavItem(1, LucideIcons.layers, 'Diary', isDark),
-          _buildFab(isDark), 
+          _buildFab(isDark),
           _buildExpandedNavItem(3, LucideIcons.barChart2, 'Stats', isDark),
           _buildExpandedNavItem(4, LucideIcons.user, 'Profile', isDark),
         ],
@@ -441,12 +565,17 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
     );
   }
 
-  Widget _buildExpandedNavItem(int index, IconData icon, String label, bool isDark) {
+  Widget _buildExpandedNavItem(
+    int index,
+    IconData icon,
+    String label,
+    bool isDark,
+  ) {
     final bool isActive = _currentIndex == index;
     return Expanded(
       child: GestureDetector(
         onTap: () => _setIndex(index),
-        behavior: HitTestBehavior.opaque, 
+        behavior: HitTestBehavior.opaque,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -457,13 +586,22 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
               child: Icon(
                 icon,
                 size: 24,
-                color: isActive ? AppColors.studioIndigo : (isDark ? AppColors.slateMuted : AppColors.lightMuted),
+                color: isActive
+                    ? AppColors.studioIndigo
+                    : (isDark ? AppColors.slateMuted : AppColors.lightMuted),
               ),
             ),
             if (isActive) ...[
               const SizedBox(height: 6),
-              Container(height: 4, width: 4, decoration: const BoxDecoration(color: AppColors.studioIndigo, shape: BoxShape.circle)),
-            ]
+              Container(
+                height: 4,
+                width: 4,
+                decoration: const BoxDecoration(
+                  color: AppColors.studioIndigo,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -476,11 +614,22 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
       child: GestureDetector(
         onTap: () => _setIndex(2),
         child: Container(
-          height: 72, width: 72,
+          height: 72,
+          width: 72,
           decoration: BoxDecoration(
-            gradient: AppColors.paintGradient, shape: BoxShape.circle,
-            boxShadow: [BoxShadow(color: AppColors.studioIndigo.withValues(alpha: 0.4), blurRadius: 25, offset: const Offset(0, 12))],
-            border: Border.all(color: isDark ? AppColors.deepSlate : Colors.white, width: 6),
+            gradient: AppColors.paintGradient,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.studioIndigo.withValues(alpha: 0.4),
+                blurRadius: 25,
+                offset: const Offset(0, 12),
+              ),
+            ],
+            border: Border.all(
+              color: isDark ? AppColors.deepSlate : Colors.white,
+              width: 6,
+            ),
           ),
           child: const Icon(LucideIcons.camera, color: Colors.white, size: 32),
         ),

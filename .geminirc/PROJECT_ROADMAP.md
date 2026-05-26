@@ -4,13 +4,13 @@ Dokumen ini berfungsi sebagai papan pelacak progres pengerjaan proyek CANVAS yan
 
 ---
 
-## 📅 FASE 1: Foundation, Data Engineering & Mobile Boilerplate (PROGRESS: 85%)
+## 📅 FASE 1: Foundation, Data Engineering & Mobile Boilerplate (PROGRESS: 95%)
 **Fokus Utama:** Menyiapkan infrastruktur database, reduksi dataset 180 GB, dan membangun kerangka dasar (boilerplate) aplikasi Flutter.
 
 ### 1. Backend & Database Setup (Supabase)
-- [ ] Buat proyek baru di dashboard Supabase.
-- [ ] Eksekusi skrip SQL DDL (`DATABASE_SCHEMA.md`) di SQL Editor Supabase.
-- [ ] Pastikan Row Level Security (RLS) dan Trigger `on_auth_user_created` aktif.
+- [x] Buat proyek baru di dashboard Supabase.
+- [x] Eksekusi skrip SQL DDL (`DATABASE_SCHEMA.md`) di SQL Editor Supabase.
+- [x] Pastikan Row Level Security (RLS) dan Trigger `on_auth_user_created` aktif.
 
 ### 2. Machine Learning Dataset Pipeline (Python Lokal)
 - [ ] Unduh berkas dataset Nutrition5k secara bertahap.
@@ -21,14 +21,14 @@ Dokumen ini berfungsi sebagai papan pelacak progres pengerjaan proyek CANVAS yan
 ### 3. Mobile Frontend Setup (Flutter)
 - [x] Inisialisasi proyek Flutter menggunakan Clean Architecture.
 - [x] Susun struktur folder paket sesuai panduan `PROJECT_ARCHITECTURE.md`.
-- [x] Pasang dependensi utama di `pubspec.yaml` (`flutter_bloc`, `supabase_flutter`, `camera`, `http`, `lucide_icons`, `google_fonts`, `image_picker`).
+- [x] Pasang dependensi utama di `pubspec.yaml` (`flutter_bloc`, `supabase_flutter`, `camera`, `http`, `lucide_icons`, `google_fonts`, `image_picker`, `google_generative_ai`).
 - [x] Implementasi **Artistic Studio Theme** (Poppins/Open Sans, Dark & Light Ready).
-- [x] Buat halaman `LoginScreen` dan `RegisterScreen` dengan transisi side-by-side artistik.
-- [ ] Implementasikan `AuthBloc` untuk memanajemeni token sesi login via Supabase Auth (UI Ready, Logic Pending).
+- [x] Buat halaman `LoginScreen` dan `RegisterScreen` dengan transisi side-by-side artistik & Autofill support.
+- [x] Implementasikan `AuthBloc` untuk memanajemeni token sesi login via Supabase Auth (Sesi Persisten Aktif).
 
 ---
 
-## 📅 FASE 2: Model Training, API Gateway & Core UI Integration (PROGRESS: 40%)
+## 📅 FASE 2: Model Training, API Gateway & Core UI Integration (PROGRESS: 55%)
 **Fokus Utama:** Melatih model AI multi-task regressor, mendeploy API FastAPI, dan menghubungkan core scanner kamera di Flutter.
 
 ### 1. Model Training & Export (AI Sub-Team)
@@ -44,13 +44,13 @@ Dokumen ini berfungsi sebagai papan pelacak progres pengerjaan proyek CANVAS yan
 - [ ] Deploy server FastAPI ke cloud provider (RunPod / Hugging Face Spaces).
 
 ### 3. Core Mobile Integration (Flutter Integration)
-- [x] Bangun halaman `DashboardScreen` dengan visualisasi ringkasan gizi harian & animasi brush accents.
+- [x] Bangun halaman `DashboardScreen` dengan visualisasi ringkasan gizi harian & sinkronisasi data nyata.
 - [x] Bangun halaman `MealDiaryScreen` dengan konsep "Layers" & fungsional filter.
-- [x] Implementasikan fungsionalitas UI `CameraScannerScreen` (UI Live Camera Ready).
+- [x] Implementasikan fungsionalitas UI `CameraScannerScreen` (UI Live Camera Ready + Fallback).
 - [ ] Implementasikan `CameraBloc` untuk mengontrol siklus hidup kamera.
 - [x] Buat overlay grafik *organic frame* target piring pada widget kamera.
-- [ ] Implementasikan `ScannerBloc` untuk menangani Online Mode.
-- [x] Buat widget `NutritionFactsCard` (Diimplementasikan sebagai `NutritionReviewScreen`) untuk menampilkan data JSON hasil respons AI.
+- [x] Implementasikan Otak AI (Gemini AI Client) untuk bantuan analisis & asisten chatbot proaktif.
+- [x] Buat widget `NutritionReviewScreen` dengan fungsionalitas edit & slider porsi.
 - [ ] Sambungkan fungsi tombol "Simpan ke Diary" untuk mengunggah entri log makanan ke tabel `food_logs` Supabase.
 
 ---
@@ -67,9 +67,8 @@ Dokumen ini berfungsi sebagai papan pelacak progres pengerjaan proyek CANVAS yan
 - [x] Implementasikan panduan UI *Multi-Angle Prompt* (30° & 60°) dengan animasi notifikasi kustom.
 
 ### 2. Fitness Progression Features (List Masa Depan)
-- [x] Buat halaman `ProfilesScreen` (Full functional edit, avatar mgt, account reveal, studio settings).
-- [x] Implementasikan alur **Onboarding Preferences** (5-Step Journey: Goal, Stats, Dietary, Strategy, Motivation).
-- [x] Buat layar **Stats Analytics** dengan grafik mingguan & nutritional balance.
-- [ ] Bangun modul UI *Weight Tracker* harian.
+- [x] Buat halaman `ProfilesScreen` (Account Reveal, Avatar Mgt, Studio Docs).
+- [x] Implementasikan alur **Onboarding Preferences** (5-Step Journey + Auto-Calculation Algoritma Gizi).
+- [x] Buat layar **Stats Analytics** dengan grafik mingguan & Weight Tracker harian.
 - [ ] Hubungkan input berat badan ke tabel `weight_logs` Supabase.
 - [x] Implementasi sistem **StudioToast** notification di pojok kanan atas.

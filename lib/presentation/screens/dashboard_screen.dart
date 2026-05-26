@@ -3,9 +3,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/theme/app_colors.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../bloc/theme_cubit.dart';
+import '../bloc/profile/profile_bloc.dart';
+import '../bloc/auth/auth_bloc.dart';
+import '../../data/repositories/food_repository_impl.dart';
+import 'meal_detail_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  final Function(int) onNavigateToTab;
+  const DashboardScreen({super.key, required this.onNavigateToTab});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -14,6 +19,10 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _brushAnimation;
+  
+  final FoodRepository _foodRepo = FoodRepositoryImpl();
+  List<FoodLogEntry> _todayLogs = [];
+  bool _isLoadingLogs = true;
 
   @override
   void initState() {
@@ -26,7 +35,28 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
       CurvedAnimation(parent: _controller, curve: const Interval(0.3, 0.8, curve: Curves.easeOutQuart)),
     );
     _controller.forward();
+
+    _loadData();
   }
+
+  Future<void> _loadData() async {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      context.read<ProfileBloc>().add(LoadProfileRequested(authState.user.id));
+      
+      final logs = await _foodRepo.getRecentLogs(authState.user.id, limit: 3);
+      if (mounted) {
+        setState(() {
+          _todayLogs = logs;
+          _isLoadingLogs = false;
+        });
+      }
+    }
+  }
+
+  double get _consumedKcal => _todayLogs.fold(0, (sum, item) => sum + item.caloriesKcal);
+  double get _consumedProtein => _todayLogs.fold(0, (sum, item) => sum + item.proteinG);
+  double get _consumedCarbs => _todayLogs.fold(0, (sum, item) => sum + item.carbsG);
 
   @override
   void dispose() {
@@ -42,27 +72,56 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
         
         return Scaffold(
           body: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 28.0, vertical: 24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _stagger(0, _buildHeader(context, isDark)),
-                  const SizedBox(height: 32),
-                  _stagger(1, _buildProgressCard(context, isDark)),
-                  const SizedBox(height: 40),
-                  _stagger(2, _buildRecentLayersHeader(isDark)),
-                  const SizedBox(height: 24),
-                  _stagger(3, _buildArtisticLogItem(context, 'Garden Palette', 'LUNCH • 320 KCAL', '🥗', AppColors.studioIndigo, isDark)),
-                  const SizedBox(height: 16),
-                  _stagger(4, _buildArtisticLogItem(context, 'Oatmilk Canvas', 'SNACK • 180 KCAL', '☕', AppColors.vibrantEmerald, isDark)),
-                  const SizedBox(height: 100),
-                ],
-              ),
+            child: BlocBuilder<ProfileBloc, ProfileState>(
+              builder: (context, profileState) {
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 28.0, vertical: 24.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _stagger(0, _buildHeader(context, isDark, profileState)),
+                      const SizedBox(height: 32),
+                      _stagger(1, _buildProgressCard(context, isDark, profileState)),
+                      const SizedBox(height: 40),
+                      _stagger(2, _buildRecentLayersHeader(isDark)),
+                      const SizedBox(height: 24),
+                      
+                      if (_isLoadingLogs)
+                        const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                      else if (_todayLogs.isEmpty)
+                        _buildEmptyState(isDark)
+                      else
+                        ..._todayLogs.asMap().entries.map((entry) {
+                          final log = entry.value;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: _stagger(3 + entry.key, _buildArtisticLogItem(context, log, isDark)),
+                          );
+                        }).toList(),
+                      
+                      const SizedBox(height: 100),
+                    ],
+                  ),
+                );
+              },
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildEmptyState(bool isDark) {
+    return Center(
+      child: Column(
+        children: [
+          const SizedBox(height: 20),
+          Icon(LucideIcons.palette, color: isDark ? Colors.white10 : Colors.black12, size: 48),
+          const SizedBox(height: 16),
+          Text('NO MASTERPIECE PAINTED YET', 
+            style: TextStyle(color: AppColors.slateMuted, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+        ],
+      ),
     );
   }
 
@@ -83,7 +142,15 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
     );
   }
 
-  Widget _buildHeader(BuildContext context, bool isDark) {
+  Widget _buildHeader(BuildContext context, bool isDark, ProfileState profileState) {
+    String name = "Studio Artist";
+    String? avatar;
+
+    if (profileState is ProfileLoaded) {
+      name = profileState.profile.fullName;
+      avatar = profileState.profile.avatarUrl;
+    }
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -97,7 +164,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
             Stack(
               clipBehavior: Clip.none,
               children: [
-                Text('Studio Jri', style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                Text(name, style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                   color: isDark ? Colors.white : AppColors.lightText
                 )),
                 Positioned(
@@ -108,7 +175,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                     builder: (context, child) {
                       return Container(
                         height: 14,
-                        width: 140 * _brushAnimation.value,
+                        width: (name.length * 12.0) * _brushAnimation.value,
                         decoration: BoxDecoration(
                           color: AppColors.studioIndigo.withValues(alpha: isDark ? 0.25 : 0.15), 
                           borderRadius: BorderRadius.circular(4)
@@ -121,12 +188,25 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
             ),
           ],
         ),
-        _buildOrganicAvatar(isDark),
+        GestureDetector(
+          onTap: () => widget.onNavigateToTab(4), // Go to Profile
+          child: _buildOrganicAvatar(isDark, avatar),
+        ),
       ],
     );
   }
 
-  Widget _buildProgressCard(BuildContext context, bool isDark) {
+  Widget _buildProgressCard(BuildContext context, bool isDark, ProfileState profileState) {
+    int targetKcal = 2000;
+    double proTarget = 150;
+    double carbTarget = 200;
+
+    if (profileState is ProfileLoaded) {
+      targetKcal = profileState.profile.dailyCalorieTarget;
+      proTarget = profileState.profile.dailyProteinTarget ?? 150;
+      carbTarget = profileState.profile.dailyCarbsTarget ?? 200;
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(32),
@@ -145,15 +225,15 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              Text('1,240', style: TextStyle(fontSize: 64, fontWeight: FontWeight.w900, letterSpacing: -2, color: isDark ? Colors.white : AppColors.lightText)),
+              Text('${_consumedKcal.toInt()}', style: TextStyle(fontSize: 64, fontWeight: FontWeight.w900, letterSpacing: -2, color: isDark ? Colors.white : AppColors.lightText)),
               const SizedBox(width: 8),
-              Text('/ 2,000 KCAL', style: TextStyle(color: isDark ? AppColors.slateMuted : AppColors.lightMuted, fontWeight: FontWeight.w800, fontSize: 14)),
+              Text('/ $targetKcal KCAL', style: TextStyle(color: isDark ? AppColors.slateMuted : AppColors.lightMuted, fontWeight: FontWeight.w800, fontSize: 14)),
             ],
           ),
           const SizedBox(height: 32),
-          _buildMacroProgress(isDark, 'Protein Base', '98 / 150g', 0.65, AppColors.studioIndigo),
+          _buildMacroProgress(isDark, 'Protein Base', '${_consumedProtein.toInt()} / ${proTarget.toInt()}g', _consumedProtein/proTarget, AppColors.studioIndigo),
           const SizedBox(height: 20),
-          _buildMacroProgress(isDark, 'Energy Carbs', '80 / 200g', 0.40, AppColors.vibrantEmerald),
+          _buildMacroProgress(isDark, 'Energy Carbs', '${_consumedCarbs.toInt()} / ${carbTarget.toInt()}g', _consumedCarbs/carbTarget, AppColors.vibrantEmerald),
         ],
       ),
     );
@@ -164,12 +244,15 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text('Recent Layers', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: isDark ? Colors.white : AppColors.lightText)),
-        const Text('GALLERY', style: TextStyle(color: AppColors.studioIndigo, fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1.2)),
+        GestureDetector(
+          onTap: () => widget.onNavigateToTab(1), // Go to Diary
+          child: const Text('GALLERY', style: TextStyle(color: AppColors.studioIndigo, fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1.2)),
+        ),
       ],
     );
   }
 
-  Widget _buildOrganicAvatar(bool isDark) {
+  Widget _buildOrganicAvatar(bool isDark, String? imageUrl) {
     return Container(
       height: 56, width: 56,
       decoration: const BoxDecoration(
@@ -180,7 +263,9 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
       child: Container(
         decoration: BoxDecoration(color: isDark ? AppColors.deepSlate : AppColors.lightBackground, borderRadius: const BorderRadius.only(topLeft: Radius.circular(28), topRight: Radius.circular(18), bottomLeft: Radius.circular(13), bottomRight: Radius.circular(33))),
         clipBehavior: Clip.antiAlias,
-        child: Image.network('https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'),
+        child: imageUrl != null 
+            ? Image.network(imageUrl, fit: BoxFit.cover)
+            : const Icon(LucideIcons.user, color: Colors.white24),
       ),
     );
   }
@@ -199,7 +284,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
         ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: LinearProgressIndicator(
-            value: progress, minHeight: 8, 
+            value: progress.clamp(0, 1), minHeight: 8, 
             backgroundColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05), 
             valueColor: AlwaysStoppedAnimation<Color>(color)
           ),
@@ -208,38 +293,52 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
     );
   }
 
-  Widget _buildArtisticLogItem(BuildContext context, String title, String subtitle, String icon, Color accentColor, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.slateCard.withValues(alpha: 0.7) : AppColors.lightCard, 
-        borderRadius: BorderRadius.circular(32), 
-        border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.indigo.withValues(alpha: 0.05)),
-        boxShadow: isDark ? null : [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 5))],
-      ),
-      child: IntrinsicHeight(
-        child: Row(
-          children: [
-            Container(width: 4, decoration: BoxDecoration(color: accentColor, borderRadius: BorderRadius.circular(4))),
-            const SizedBox(width: 20),
-            Container(
-              height: 60, width: 60,
-              decoration: BoxDecoration(color: isDark ? AppColors.deepSlate : AppColors.lightBackground, borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(15), bottomLeft: Radius.circular(10), bottomRight: Radius.circular(25))),
-              child: Center(child: Text(icon, style: const TextStyle(fontSize: 28))),
-            ),
-            const SizedBox(width: 20),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: isDark ? Colors.white : AppColors.lightText)),
-                  const SizedBox(height: 4),
-                  Text(subtitle, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: isDark ? AppColors.slateMuted : AppColors.lightMuted, letterSpacing: 1.1)),
-                ],
+  Widget _buildArtisticLogItem(BuildContext context, FoodLogEntry log, bool isDark) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(context, MaterialPageRoute(builder: (context) => MealDetailScreen(
+          title: log.foodName,
+          time: "${log.createdAt.hour}:${log.createdAt.minute}",
+          icon: "🍽️",
+          kcal: log.caloriesKcal,
+          protein: log.proteinG,
+          carbs: log.carbsG,
+          fat: log.fatG,
+          imageUrl: log.imageUrl ?? 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1000&auto=format&fit=crop',
+        )));
+      },
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.slateCard.withValues(alpha: 0.7) : AppColors.lightCard, 
+          borderRadius: BorderRadius.circular(32), 
+          border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.indigo.withValues(alpha: 0.05)),
+          boxShadow: isDark ? null : [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 5))],
+        ),
+        child: IntrinsicHeight(
+          child: Row(
+            children: [
+              Container(width: 4, decoration: BoxDecoration(color: AppColors.studioIndigo, borderRadius: BorderRadius.circular(4))),
+              const SizedBox(width: 20),
+              Container(
+                height: 60, width: 60,
+                decoration: BoxDecoration(color: isDark ? AppColors.deepSlate : AppColors.lightBackground, borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(15), bottomLeft: Radius.circular(10), bottomRight: Radius.circular(25))),
+                child: Center(child: Text("🖼️", style: const TextStyle(fontSize: 24))),
               ),
-            ),
-            Icon(LucideIcons.chevronRight, color: isDark ? AppColors.slateMuted : AppColors.lightMuted, size: 20),
-          ],
+              const SizedBox(width: 20),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(log.foodName, style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: isDark ? Colors.white : AppColors.lightText)),
+                    const SizedBox(height: 4),
+                    Text("${log.caloriesKcal.toInt()} KCAL", style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: isDark ? AppColors.slateMuted : AppColors.lightMuted, letterSpacing: 1.1)),
+                  ],
+                ),
+              ),
+              Icon(LucideIcons.chevronRight, color: isDark ? AppColors.slateMuted : AppColors.lightMuted, size: 20),
+            ],
+          ),
         ),
       ),
     );

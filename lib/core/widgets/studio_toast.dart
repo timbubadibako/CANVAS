@@ -9,7 +9,11 @@ class StudioToast {
     );
 
     overlay.insert(overlayEntry);
-    Future.delayed(const Duration(seconds: 3), () => overlayEntry.remove());
+    Future.delayed(const Duration(seconds: 4), () {
+       if (overlayEntry.mounted) {
+         overlayEntry.remove();
+       }
+    });
   }
 }
 
@@ -51,7 +55,7 @@ class _ToastWidgetState extends State<_ToastWidget> with SingleTickerProviderSta
 
     _controller.forward();
 
-    Future.delayed(const Duration(milliseconds: 2400), () {
+    Future.delayed(const Duration(milliseconds: 3200), () {
       if (mounted) _controller.reverse();
     });
   }
@@ -65,7 +69,7 @@ class _ToastWidgetState extends State<_ToastWidget> with SingleTickerProviderSta
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      top: 60, // Pojok kanan atas
+      top: 60, 
       right: 24,
       child: Material(
         color: Colors.transparent,
@@ -77,7 +81,10 @@ class _ToastWidgetState extends State<_ToastWidget> with SingleTickerProviderSta
               child: SlideTransition(
                 position: _slideAnimation,
                 child: Container(
-                  height: 54,
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width * 0.8,
+                    minHeight: 54,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.studioIndigo,
                     borderRadius: BorderRadius.circular(27),
@@ -89,27 +96,30 @@ class _ToastWidgetState extends State<_ToastWidget> with SingleTickerProviderSta
                       )
                     ],
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       if (widget.icon != null) ...[
                         Icon(widget.icon, color: Colors.white, size: 18),
                         const SizedBox(width: 12),
                       ],
-                      ClipRect(
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          widthFactor: _widthAnimation.value,
-                          child: Text(
-                            widget.message,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 12,
-                              letterSpacing: 0.8,
+                      Flexible(
+                        child: ClipRect(
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            widthFactor: _widthAnimation.value,
+                            child: Text(
+                              widget.message,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 12,
+                                letterSpacing: 0.8,
+                              ),
+                              softWrap: true,
                             ),
-                            maxLines: 1,
                           ),
                         ),
                       ),
