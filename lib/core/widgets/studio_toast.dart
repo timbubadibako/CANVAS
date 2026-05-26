@@ -73,7 +73,7 @@ class _ToastWidgetState extends State<_ToastWidget> with SingleTickerProviderSta
           animation: _controller,
           builder: (context, child) {
             return Opacity(
-              opacity: _opacityAnimation.value,
+              opacity: _opacityAnimation.value.clamp(0.0, 1.0),
               child: SlideTransition(
                 position: _slideAnimation,
                 child: Container(

@@ -5,8 +5,6 @@ import 'app_colors.dart';
 class AppTheme {
   static ThemeData get darkTheme {
     final baseTheme = ThemeData.dark();
-    
-    // Explicitly define text theme with weights matching the "Bulky" look
     final textTheme = GoogleFonts.openSansTextTheme(baseTheme.textTheme).copyWith(
       displayLarge: GoogleFonts.poppins(fontWeight: FontWeight.w900, color: Colors.white),
       displayMedium: GoogleFonts.poppins(fontWeight: FontWeight.w900, color: Colors.white),
@@ -32,12 +30,19 @@ class AppTheme {
         primary: AppColors.studioIndigo,
         secondary: AppColors.royalViolet,
         surface: AppColors.slateCard,
+        onSurface: Colors.white,
         error: AppColors.deepRose,
       ),
       cardTheme: CardThemeData(
         color: AppColors.slateCard.withValues(alpha: 0.7),
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: AppColors.slateCard.withValues(alpha: 0.5),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+        hintStyle: const TextStyle(color: Colors.white24),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -53,7 +58,6 @@ class AppTheme {
 
   static ThemeData get lightTheme {
     final baseTheme = ThemeData.light();
-    
     final textTheme = GoogleFonts.openSansTextTheme(baseTheme.textTheme).copyWith(
       displayLarge: GoogleFonts.poppins(fontWeight: FontWeight.w900, color: AppColors.lightText),
       displayMedium: GoogleFonts.poppins(fontWeight: FontWeight.w900, color: AppColors.lightText),
@@ -79,15 +83,29 @@ class AppTheme {
         primary: AppColors.studioIndigo,
         secondary: AppColors.royalViolet,
         surface: AppColors.lightCard,
+        onSurface: AppColors.lightText,
         error: AppColors.deepRose,
       ),
       cardTheme: CardThemeData(
-        color: AppColors.lightCard.withValues(alpha: 0.8),
+        color: AppColors.lightCard.withValues(alpha: 0.9),
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(32),
           side: BorderSide(color: Colors.indigo.withValues(alpha: 0.05)),
         ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: BorderSide(color: Colors.indigo.withValues(alpha: 0.1)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: BorderSide(color: Colors.indigo.withValues(alpha: 0.1)),
+        ),
+        hintStyle: const TextStyle(color: Colors.black26),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(

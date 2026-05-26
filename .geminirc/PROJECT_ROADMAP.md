@@ -50,7 +50,7 @@ Dokumen ini berfungsi sebagai papan pelacak progres pengerjaan proyek CANVAS yan
 - [ ] Implementasikan `CameraBloc` untuk mengontrol siklus hidup kamera.
 - [x] Buat overlay grafik *organic frame* target piring pada widget kamera.
 - [ ] Implementasikan `ScannerBloc` untuk menangani Online Mode.
-- [ ] Buat widget `NutritionFactsCard` untuk menampilkan data JSON hasil respons AI.
+- [x] Buat widget `NutritionFactsCard` (Diimplementasikan sebagai `NutritionReviewScreen`) untuk menampilkan data JSON hasil respons AI.
 - [ ] Sambungkan fungsi tombol "Simpan ke Diary" untuk mengunggah entri log makanan ke tabel `food_logs` Supabase.
 
 ---

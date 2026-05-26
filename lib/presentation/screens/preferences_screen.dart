@@ -35,12 +35,13 @@ class _OnboardingPreferencesScreenState extends State<OnboardingPreferencesScree
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
             const SizedBox(height: 24),
-            _buildProgressBar(),
+            _buildProgressBar(isDark),
             Expanded(
               child: PageView(
                 controller: _pageController,
@@ -67,7 +68,7 @@ class _OnboardingPreferencesScreenState extends State<OnboardingPreferencesScree
     );
   }
 
-  Widget _buildProgressBar() {
+  Widget _buildProgressBar(bool isDark) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 48),
       child: Row(
@@ -76,7 +77,10 @@ class _OnboardingPreferencesScreenState extends State<OnboardingPreferencesScree
           return Expanded(
             child: Container(
               height: 4, margin: const EdgeInsets.symmetric(horizontal: 4),
-              decoration: BoxDecoration(color: isActive ? AppColors.studioIndigo : Colors.white12, borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(
+                color: isActive ? AppColors.studioIndigo : (isDark ? Colors.white12 : Colors.black12), 
+                borderRadius: BorderRadius.circular(2)
+              ),
             ),
           );
         }),
@@ -115,13 +119,14 @@ class _OnboardingPreferencesScreenState extends State<OnboardingPreferencesScree
   }
 
   Widget _buildDietaryStep() {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return _buildStepContainer(
       title: "Dietary\nPalette",
       subtitle: "Daily activity and eating style.",
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("ACTIVITY LEVEL", style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: AppColors.slateMuted, letterSpacing: 1.2)),
+          Text("ACTIVITY LEVEL", style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: isDark ? AppColors.slateMuted : AppColors.lightMuted, letterSpacing: 1.2)),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -133,7 +138,7 @@ class _OnboardingPreferencesScreenState extends State<OnboardingPreferencesScree
             ],
           ),
           const SizedBox(height: 32),
-          Text("EATING STYLE", style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: AppColors.slateMuted, letterSpacing: 1.2)),
+          Text("EATING STYLE", style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: isDark ? AppColors.slateMuted : AppColors.lightMuted, letterSpacing: 1.2)),
           const SizedBox(height: 12),
           _buildSelectCard("Everything", "No specific restrictions.", LucideIcons.utensils, _dietaryStyle, (v) => _dietaryStyle = v),
           const SizedBox(height: 12),
@@ -144,6 +149,7 @@ class _OnboardingPreferencesScreenState extends State<OnboardingPreferencesScree
   }
 
   Widget _buildSmallChip(String label, bool isSelected, VoidCallback onTap) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -151,10 +157,10 @@ class _OnboardingPreferencesScreenState extends State<OnboardingPreferencesScree
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.studioIndigo : Colors.white.withValues(alpha: 0.05),
+            color: isSelected ? AppColors.studioIndigo : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05)),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Center(child: Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isSelected ? Colors.white : AppColors.slateMuted))),
+          child: Center(child: Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isSelected ? Colors.white : (isDark ? AppColors.slateMuted : AppColors.lightMuted)))),
         ),
       ),
     );
@@ -195,13 +201,14 @@ class _OnboardingPreferencesScreenState extends State<OnboardingPreferencesScree
   }
 
   Widget _buildStepContainer({required String title, required String subtitle, required Widget child}) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(32.0),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const SizedBox(height: 40),
         Text(title, style: Theme.of(context).textTheme.headlineLarge),
         const SizedBox(height: 12),
-        Text(subtitle, style: const TextStyle(color: AppColors.slateMuted, fontSize: 15)),
+        Text(subtitle, style: TextStyle(color: isDark ? AppColors.slateMuted : AppColors.lightMuted, fontSize: 15)),
         const SizedBox(height: 48),
         child,
       ]),
@@ -210,18 +217,24 @@ class _OnboardingPreferencesScreenState extends State<OnboardingPreferencesScree
 
   Widget _buildSelectCard(String title, String desc, IconData icon, String groupValue, Function(String) onSelect) {
     final bool isSelected = groupValue == title;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
     return GestureDetector(
       onTap: () => setState(() => onSelect(title)),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(color: isSelected ? AppColors.studioIndigo.withValues(alpha: 0.1) : AppColors.slateCard, borderRadius: BorderRadius.circular(32), border: Border.all(color: isSelected ? AppColors.studioIndigo : Colors.white.withValues(alpha: 0.05))),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.studioIndigo.withValues(alpha: 0.1) : (isDark ? AppColors.slateCard : AppColors.lightCard), 
+          borderRadius: BorderRadius.circular(32), 
+          border: Border.all(color: isSelected ? AppColors.studioIndigo : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.indigo.withValues(alpha: 0.05)))
+        ),
         child: Row(children: [
-          Icon(icon, color: isSelected ? AppColors.studioIndigo : AppColors.slateMuted, size: 24),
+          Icon(icon, color: isSelected ? AppColors.studioIndigo : (isDark ? AppColors.slateMuted : AppColors.lightMuted), size: 24),
           const SizedBox(width: 20),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
-            Text(desc, style: const TextStyle(color: AppColors.slateMuted, fontSize: 11)),
+            Text(title, style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: isDark ? Colors.white : AppColors.lightText)),
+            Text(desc, style: TextStyle(color: isDark ? AppColors.slateMuted : AppColors.lightMuted, fontSize: 11)),
           ])),
         ]),
       ),
@@ -229,29 +242,45 @@ class _OnboardingPreferencesScreenState extends State<OnboardingPreferencesScree
   }
 
   Widget _buildStatInput(String label, String value, String unit, Function(String) onChanged) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: AppColors.slateMuted)),
+      Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: isDark ? AppColors.slateMuted : AppColors.lightMuted)),
       const SizedBox(height: 12),
-      TextField(onChanged: onChanged, keyboardType: TextInputType.number, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold), decoration: InputDecoration(suffixText: unit, suffixStyle: const TextStyle(color: AppColors.studioIndigo, fontWeight: FontWeight.bold), filled: true, fillColor: AppColors.slateCard, border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none), contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20))),
+      TextField(
+        onChanged: onChanged, keyboardType: TextInputType.number, 
+        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.lightText), 
+        decoration: InputDecoration(
+          suffixText: unit, suffixStyle: const TextStyle(color: AppColors.studioIndigo, fontWeight: FontWeight.bold), 
+          filled: true, fillColor: isDark ? AppColors.slateCard : AppColors.lightCard, 
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none), 
+          contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20)
+        )
+      ),
     ]);
   }
 
   Widget _buildStrategyCard(String title, String desc, Color color) {
     final bool isSelected = _strategy == title;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
     return GestureDetector(
       onTap: () => setState(() => _strategy = title),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(color: isSelected ? color.withValues(alpha: 0.1) : AppColors.slateCard, borderRadius: BorderRadius.circular(32), border: Border.all(color: isSelected ? color : Colors.white.withValues(alpha: 0.05))),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withValues(alpha: 0.1) : (isDark ? AppColors.slateCard : AppColors.lightCard), 
+          borderRadius: BorderRadius.circular(32), 
+          border: Border.all(color: isSelected ? color : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.indigo.withValues(alpha: 0.05)))
+        ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Text(title, style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: isSelected ? color : Colors.white)),
+            Text(title, style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: isSelected ? color : (isDark ? Colors.white : AppColors.lightText))),
             const Spacer(),
             if (isSelected) Icon(Icons.check_circle, color: color, size: 20),
           ]),
           const SizedBox(height: 4),
-          Text(desc, style: const TextStyle(color: AppColors.slateMuted, fontSize: 12)),
+          Text(desc, style: TextStyle(color: isDark ? AppColors.slateMuted : AppColors.lightMuted, fontSize: 12)),
         ]),
       ),
     );

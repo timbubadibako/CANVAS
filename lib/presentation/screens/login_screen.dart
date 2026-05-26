@@ -30,6 +30,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       resizeToAvoidBottomInset: true,
       body: FadeTransition(
@@ -38,7 +40,13 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           children: [
             Positioned(
               top: -100, left: -100,
-              child: Container(width: 300, height: 300, decoration: BoxDecoration(color: AppColors.studioIndigo.withValues(alpha: 0.1), shape: BoxShape.circle)),
+              child: Container(
+                width: 300, height: 300, 
+                decoration: BoxDecoration(
+                  color: AppColors.studioIndigo.withValues(alpha: isDark ? 0.1 : 0.05), 
+                  shape: BoxShape.circle
+                )
+              ),
             ),
             SafeArea(
               child: SingleChildScrollView(
@@ -47,27 +55,20 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 60),
-                    Container(
-                      height: 80, width: 80,
-                      decoration: BoxDecoration(
-                        gradient: AppColors.paintGradient, borderRadius: BorderRadius.circular(24),
-                        boxShadow: [BoxShadow(color: AppColors.studioIndigo.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 10))],
-                      ),
-                      child: const Icon(Icons.palette, color: Colors.white, size: 40),
-                    ),
+                    _buildLogo(),
                     const SizedBox(height: 40),
                     Text('Welcome Back', style: Theme.of(context).textTheme.headlineMedium),
                     const SizedBox(height: 8),
-                    const Text('Sign in to sync your canvas logs.', style: TextStyle(color: AppColors.slateMuted, fontSize: 16)),
+                    Text('Sign in to sync your canvas logs.', 
+                      style: TextStyle(color: isDark ? AppColors.slateMuted : AppColors.lightMuted, fontSize: 16)
+                    ),
                     const SizedBox(height: 48),
-                    _buildTextField(label: 'STUDIO EMAIL', hint: 'artist@canvas.io'),
+                    _buildTextField(context, label: 'STUDIO EMAIL', hint: 'artist@canvas.io'),
                     const SizedBox(height: 24),
-                    _buildTextField(label: 'ACCESS KEY', hint: '••••••••', isPassword: true),
+                    _buildTextField(context, label: 'ACCESS KEY', hint: '••••••••', isPassword: true),
                     const SizedBox(height: 60),
                     ElevatedButton(
-                      onPressed: () {
-                        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MainNavWrapper()));
-                      },
+                      onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MainNavWrapper())),
                       child: const Text('SIGN IN'),
                     ),
                     const SizedBox(height: 24),
@@ -77,7 +78,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                         child: RichText(
                           text: TextSpan(
                             text: "Don't have a palette? ",
-                            style: const TextStyle(color: AppColors.slateMuted),
+                            style: TextStyle(color: isDark ? AppColors.slateMuted : AppColors.lightMuted),
                             children: [
                               TextSpan(text: 'Sign Up', style: TextStyle(color: AppColors.studioIndigo, fontWeight: FontWeight.bold)),
                             ],
@@ -96,21 +97,32 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
   }
 
-  Widget _buildTextField({required String label, required String hint, bool isPassword = false}) {
+  Widget _buildLogo() {
+    return Container(
+      height: 80, width: 80,
+      decoration: BoxDecoration(
+        gradient: AppColors.paintGradient, borderRadius: BorderRadius.circular(24),
+        boxShadow: [BoxShadow(color: AppColors.studioIndigo.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 10))],
+      ),
+      child: const Icon(Icons.palette, color: Colors.white, size: 40),
+    );
+  }
+
+  Widget _buildTextField(BuildContext context, {required String label, required String hint, bool isPassword = false}) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppColors.slateMuted, fontSize: 10)),
+        Text(label, style: Theme.of(context).textTheme.labelLarge?.copyWith(
+          color: isDark ? AppColors.slateMuted : AppColors.lightMuted, fontSize: 10
+        )),
         const SizedBox(height: 8),
         TextField(
           obscureText: isPassword,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: isDark ? Colors.white : AppColors.lightText),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: Colors.white24),
-            filled: true,
-            fillColor: AppColors.slateCard.withValues(alpha: 0.5),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+            // Uses decoration from AppTheme
             contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
           ),
         ),

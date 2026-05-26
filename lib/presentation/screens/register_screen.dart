@@ -8,6 +8,8 @@ class RegisterScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       resizeToAvoidBottomInset: true,
       body: SafeArea(
@@ -18,28 +20,26 @@ class RegisterScreen extends StatelessWidget {
             children: [
               IconButton(
                 onPressed: onBackPressed,
-                icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+                icon: Icon(Icons.arrow_back_ios_new, size: 20, color: isDark ? Colors.white : AppColors.lightText),
                 padding: EdgeInsets.zero,
                 alignment: Alignment.centerLeft,
               ),
               const SizedBox(height: 32),
               Text('New Palette', style: Theme.of(context).textTheme.headlineMedium),
               const SizedBox(height: 8),
-              const Text('Start your journey with CANVAS.', style: TextStyle(color: AppColors.slateMuted, fontSize: 16)),
+              Text('Start your journey with CANVAS.', 
+                style: TextStyle(color: isDark ? AppColors.slateMuted : AppColors.lightMuted, fontSize: 16)
+              ),
               const SizedBox(height: 48),
-              _buildTextField(label: 'FULL NAME', hint: 'Claude Monet'),
+              _buildTextField(context, label: 'FULL NAME', hint: 'Claude Monet'),
               const SizedBox(height: 24),
-              _buildTextField(label: 'STUDIO EMAIL', hint: 'artist@canvas.io'),
+              _buildTextField(context, label: 'STUDIO EMAIL', hint: 'artist@canvas.io'),
               const SizedBox(height: 24),
-              _buildTextField(label: 'ACCESS KEY', hint: '••••••••', isPassword: true),
+              _buildTextField(context, label: 'ACCESS KEY', hint: '••••••••', isPassword: true),
               const SizedBox(height: 60),
               ElevatedButton(
                 onPressed: () {
-                   Navigator.pushAndRemoveUntil(
-                    context, 
-                    MaterialPageRoute(builder: (context) => const OnboardingPreferencesScreen()), 
-                    (route) => false,
-                  );
+                   Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const OnboardingPreferencesScreen()), (route) => false);
                 },
                 child: const Text('CREATE ACCOUNT'),
               ),
@@ -51,21 +51,20 @@ class RegisterScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTextField({required String label, required String hint, bool isPassword = false}) {
+  Widget _buildTextField(BuildContext context, {required String label, required String hint, bool isPassword = false}) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.5, color: AppColors.slateMuted)),
+        Text(label, style: Theme.of(context).textTheme.labelLarge?.copyWith(
+          color: isDark ? AppColors.slateMuted : AppColors.lightMuted, fontSize: 10
+        )),
         const SizedBox(height: 8),
         TextField(
           obscureText: isPassword,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: isDark ? Colors.white : AppColors.lightText),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: Colors.white24),
-            filled: true,
-            fillColor: AppColors.slateCard.withValues(alpha: 0.5),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
             contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
           ),
         ),
