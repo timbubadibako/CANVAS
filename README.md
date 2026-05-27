@@ -1,84 +1,113 @@
-# **CANVAS**
+<div align="center">
 
-**Project Name:** CANVAS (*Computerized Automated Nutrition & Volume Analysis System*)
+# 🎨 CANVAS
+### Computerized Automated Nutrition & Volume Analysis System
 
-**Framework Stack:** Flutter (Mobile) & Supabase (Backend/Database)
+[![Flutter](https://img.shields.io/badge/Flutter-v3.22+-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
+[![Supabase](https://img.shields.io/badge/Supabase-Database-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com)
+[![Gemini AI](https://img.shields.io/badge/Gemini_AI-2.5_Flash-4285F4?logo=google-gemini&logoColor=white)](https://ai.google.dev)
+[![License: CC BY 4.0](https://img.shields.io/badge/License-CC_BY_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
 
-**Core Technology:** On-Device Computer Vision & Multimodal Regression Models 
-
----
-
-## 1. Executive Summary (Latar Belakang)
-
-Masalah utama pada aplikasi pelacak nutrisi saat ini (*Nutritional Tracking Apps*) adalah ketergantungan pada input manual pengguna yang rumit dan tidak akurat karena keterbatasan manusia dalam mengestimasi porsi makanan secara visual.
-
-**CANVAS** hadir sebagai solusi sistem otomatis berbasis visi komputer multiplatform (Flutter) untuk memprediksi nilai kalori dan makronutrien (karbohidrat, lemak, protein) secara langsung dari makanan dunia nyata (*generic food*). Berdasarkan penelitian pada paper *Nutrition5k*, estimasi porsi visual manusia memiliki tingkat kesalahan (*error*) hingga 41%–53%. CANVAS mengadaptasi metodologi penelitian tersebut untuk memangkas *error* prediksi menggunakan pendekatan *multimodal* (RGB + Estimasi Volume Skalar).
+**Revolutionizing nutritional tracking through computer vision and artistic precision.**
 
 ---
 
-## 2. Core Objectives (Tujuan Proyek)
+[**Overview**](#-overview) • [**Key Features**](#-key-features) • [**The Gallery**](#-the-studio-gallery) • [**ML Engine**](#-machine-learning--data) • [**License**](#-license--citation)
 
-* **Otomatisasi Pelacakan Nutrisi:** Membantu pengguna mencatat asupan kalori dan makronutrien harian hanya dengan mengarahkan kamera ponsel ke arah makanan.
-* **Optimasi Estimasi Porsi:** Mengatasi kelemahan kamera 2D standar dalam memprediksi berat/porsi makanan dengan menerapkan logika estimasi volume skalar.
-* **Implementasi On-Device AI:** Menjalankan inferensi model *machine learning* langsung di dalam perangkat *smartphone* (*on-device*) untuk menjamin kecepatan, privasi, dan efisiensi biaya server.
+</div>
 
----
+## 🌟 Overview
 
-## 3. Key Features & Scope (Fitur Utama)
+**CANVAS** is an elite multimodal automated nutrition tracking system designed to eliminate the friction of manual data entry. By adapting the cutting-edge methodology from the **Nutrition5k** research, CANVAS predicts caloric and macronutrient values directly from real-world food imagery with a target precision that outperforms human visual estimation by over 50%.
 
-### A. Dual-Engine Scanner (Fitur Utama)
+## ✨ Key Features
 
-Sistem pemindaian pintar yang mendeteksi jenis makanan sekaligus porsinya menggunakan dua skenario *hardware*:
+### 🚀 Dual-Engine Smart Scanner
+*   **Flagship Mode:** Leverages physical depth sensors (LiDAR) for high-precision scalar volume calculation (Target MAE ~16.5%).
+*   **Standard Mode:** Utilizes 2D regression models and multi-view reconstruction for generic devices (Target MAE ~26.1%).
 
-* **Mode Flagship (LiDAR/Depth Assisted):** Menggunakan sensor kedalaman fisik pada *smartphone* (seperti iPhone Pro series) untuk menghitung volume skalar makanan secara presisi guna mencapai akurasi optimal (Target MAE ~16.5%).
-* **Mode Standar (2D Direct Prediction & Multi-Angle):** Menggunakan kamera 2D biasa pada ponsel umum dengan estimasi regresi langsung (Target MAE ~26.1%) atau opsi pengambilan foto dari beberapa sudut (*multi-view*) untuk rekonstruksi volume tiruan.
+### 🤖 Studio Assistant (AI Bot)
+Integrated **Gemini 2.5 Flash** agent that provides real-time, personalized nutritional coaching based on your current physical metadata and daily consumption logs.
 
-### B. Daily Diet Log & Analytics
-
-* Sinkronisasi riwayat makanan harian pengguna ke dalam database cloud.
-* Grafik perkembangan kalori harian dan pemenuhan target makronutrien (Lemak, Karbohidrat, Protein).
-
-### C. Localized Food Database Integration
-
-* Integrasi model awal menggunakan *USDA Food Database* (berdasarkan dataset Nutrition5k) yang dikombinasikan dengan pemetaan nutrisi makanan lokal untuk adaptasi kuliner harian pengguna.
+### 📊 Artistic Analytics
+Dynamic weekly trends and nutritional composition canvases that visualize your journey with a premium aesthetic.
 
 ---
 
-## 4. Technical Architecture (Arsitektur Teknologi)
+## 🖼️ The Studio Gallery
 
-### Mobile Frontend (Flutter)
+### 🌑 The Dark Canvas (OLED Optimized)
+*Experience deep blacks and vibrant neon accents, designed for high-end mobile displays.*
 
-* **UI/UX:** Menggunakan pendekatan *Component-Driven UI* (Widget dekoratif yang modular dan reaktif terhadap *state* AI).
-* **Camera Handling:** Memanfaatkan *stream* kamera *real-time* per frame untuk kalkulasi matriks gambar.
-* **ML Inference Engine:** Menggunakan **ONNX Runtime Mobile** atau **TFLite Flutter** untuk mengeksekusi model hasil *training* yang sudah dikompresi (Kuantisasi parameter ke *Int8* seberat ~50 MB).
+<p align="center">
+  <img src=".github/screenshots/dashboard_dark.jpeg" width="32%" />
+  <img src=".github/screenshots/stats_dark.jpeg" width="32%" />
+  <img src=".github/screenshots/chatbot_dark.png" width="32%" />
+</p>
 
-### Machine Learning Pipeline (Python - Eksperimental Tim)
+### ☀️ The Light Canvas (Studio Clean)
+*A minimalist and airy aesthetic, focusing on clarity and daylight readability.*
 
-* **Backbone Model:** Inception V2/V3 atau MobileNetV3 (Pre-trained).
-* **Dataset:** *Nutrition5k Dataset* (180 GB mentah, di-downsample menjadi porsi frame esensial untuk efisiensi *training*).
-* **Output Model:** *Multi-task learning head* yang mengeluarkan 5 output regresi sekaligus: Kalori, Total Massa, Karbohidrat, Lemak, dan Protein.
-
-### Backend & Storage (Supabase)
-
-* PostgreSQL Database untuk menyimpan data user profile, target diet harian, dan riwayat *food logging*.
-* Supabase Auth untuk manajemen *login/register* tim dan pengguna.
+<p align="center">
+  <img src=".github/screenshots/dashboard_light.jpeg" width="32%" />
+  <img src=".github/screenshots/stats_light.jpeg" width="32%" />
+  <img src=".github/screenshots/chatbot_light.jpeg" width="32%" />
+</p>
 
 ---
 
-## 5. Timeline & Pembagian Tugas Tim (3-Phase Workflow)
+## 🧠 Machine Learning & Data
 
-### Fase 1: Data Engineering & Preprocessing (Keroyokan PC Lokal)
+CANVAS utilizes the **Nutrition5k Dataset** for training its regression models. This massive dataset provides the ground truth for realistic food scanning.
 
-* Pembagian tugas mengunduh dan memotong frame video dataset Nutrition5k secara sekuensial (tiap kelipatan 5 frame).
-* Melakukan *resize* massal gambar ke ukuran $256 \times 256$ piksel dan konversi ke format biner untuk memangkas ukuran data dari 180 GB ke ukuran yang siap latih.
+*   **Dataset Size:** ~181.4 GB
+*   **Contents:** 5,006 plates, overhead RGB-D images, rotating side-angle videos, and per-ingredient mass/macronutrients.
+*   **Regression Target:** Multi-task head predicting Calories, Total Mass, Protein, Carbs, and Fat.
 
-### Fase 2: Model Training & Mobile Boilerplate (Paralel)
+### Download Nutrition5k
+```bash
+# Using gsutil to clone the dataset
+gsutil -m cp -r "gs://nutrition5k_dataset/nutrition5k_dataset/" .
+```
 
-* **Sub-Tim AI:** Melatih model *multi-task regressor* di cloud/lokal dan melakukan optimasi kuantisasi model menjadi file ringan.
-* **Sub-Tim Mobile:** Membuat kerangka aplikasi Flutter, integrasi SDK Supabase, dan implementasi fitur akses kamera.
+---
 
-### Fase 3: Integrasi & Pengujian Engine
+## 🛠️ Technical Stack
 
-* Memasukkan file model AI ke dalam aset aplikasi Flutter.
-* Menghubungkan *output* inferensi kamera on-device ke dalam fungsi *auto-fill* log makanan di UI aplikasi.
-* Pengujian akurasi sistem (*user acceptance testing*).
+- **Frontend:** Flutter (Business Logic Component / BLoC)
+- **Backend:** Supabase (PostgreSQL, Auth, Storage)
+- **AI Core:** Google Generative AI (Gemini 2.5 Flash)
+- **Image Engine:** Custom background isolates for 60FPS responsiveness.
+- **Automation:** Appium + WebdriverIO (E2E Testing).
+
+---
+
+## 📜 Acknowledgements & Citations
+
+This project stands on the shoulders of giants. CANVAS is built upon and inspired by the **Nutrition5k** dataset and research methodology open-sourced by Google Research. 
+
+### Nutrition5k Dataset License
+The visual and nutritional data from Nutrition5k used during our development phase is distributed under the [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/) license. 
+
+We highly appreciate and credit the authors for promoting research in visual nutrition understanding:
+
+```bibtex
+@inproceedings{thames2021nutrition5k,
+  title={Nutrition5k: Towards Automatic Nutritional Understanding of Generic Food},
+  author={Thames, Quin and Karpur, Arjun and Norris, Wade and Xia, Fangting and Panait, Liviu and Weyand, Tobias and Sim, Jack},
+  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
+  pages={8903--8911},
+  year={2021}
+}
+```
+---
+---
+
+<p align="center">
+  Developed by @jrilym the <a href="https://github.com/timbubadibako"><b>Timbubadibako's<b>
+</p>
+<p align="center">
+  <a href="https://ko-fi.com/timbubadibako">
+    <img src="https://storage.ko-fi.com/cdn/brandasset/kofi_bg_tag_dark.png" height="36" alt="Support us on Ko-fi" />
+  </a>
+</p>
