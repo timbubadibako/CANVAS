@@ -1,0 +1,34 @@
+{
+  "name": "canvas",
+  "version": "1.0.0",
+  "description": "**Project Name:** CANVAS (*Computerized Automated Nutrition & Volume Analysis System*)",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/timbubadibako/CANVAS.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/timbubadibako/CANVAS/issues"
+  },
+  "homepage": "https://github.com/timbubadibako/CANVAS#readme",
+  "devDependencies": {
+    "appium": "^3.4.2",
+    "appium-flutter-finder": "^0.2.0",
+    "appium-flutter-integration-driver": "^2.0.3",
+    "appium-uiautomator2-driver": "^7.5.2",
+    "chai": "^6.2.2",
+    "mocha": "^11.7.6",
+    "webdriverio": "^9.27.2"
+  }
+}

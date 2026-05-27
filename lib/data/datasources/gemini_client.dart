@@ -1,6 +1,6 @@
-import 'dart:convert';
+// import 'dart:convert';
 import 'dart:typed_data';
-import 'package:http/http.dart' as http;
+// import 'package:http/http.dart' as http;
 import 'package:google_generative_ai/google_generative_ai.dart';
 import '../../core/constants/app_constants.dart';
 
@@ -15,7 +15,7 @@ class GeminiClient {
 
   void init() {
     print("[GeminiClient] Initializing...");
-    _listAvailableModels(); 
+    // _listAvailableModels(); 
     
     try {
       _model = GenerativeModel(
@@ -40,21 +40,21 @@ class GeminiClient {
     }
   }
 
-  Future<void> _listAvailableModels() async {
-    final url = Uri.parse('https://generativelanguage.googleapis.com/v1beta/models?key=${AppConstants.geminiApiKey}');
-    try {
-      final response = await http.get(url);
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        print("--- [GeminiClient] AVAILABLE MODELS ---");
-        for (var m in data['models']) {
-          print("Model: ${m['name']}");
-        }
-      }
-    } catch (e) {
-      print("[GeminiClient] listModels error: $e");
-    }
-  }
+  // Future<void> _listAvailableModels() async {
+  //   final url = Uri.parse('https://generativelanguage.googleapis.com/v1beta/models?key=${AppConstants.geminiApiKey}');
+  //   try {
+  //     final response = await http.get(url);
+  //     if (response.statusCode == 200) {
+  //       final data = jsonDecode(response.body);
+  //       print("--- [GeminiClient] AVAILABLE MODELS ---");
+  //       for (var m in data['models']) {
+  //         print("Model: ${m['name']}");
+  //       }
+  //     }
+  //   } catch (e) {
+  //     print("[GeminiClient] listModels error: $e");
+  //   }
+  // }
 
   Future<String> getChatResponse(String prompt) async {
     try {

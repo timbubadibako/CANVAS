@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:appium_flutter_server/appium_flutter_server.dart';
 import 'package:canvas/main.dart' as app;
 

@@ -1,6 +1,4 @@
-# ==========================================
-# CANVAS Studio - Master Gitignore (2026)
-# ==========================================
+# CANVAS Studio - Master Gitignore
 
 # Miscellaneous & OS
 *.class
@@ -10,16 +8,15 @@
 .DS_Store
 Thumbs.db
 .history/
-migrate_working_dir/
 
-# IntelliJ & VS Code
+# IDEs
+.idea/
+.vscode/
 *.iml
 *.ipr
 *.iws
-.idea/
-.vscode/
 
-# Flutter/Dart/Pub internal
+# Flutter / Dart
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
@@ -29,37 +26,20 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
-/coverage/
 
-# Android/iOS Native Build Artifacts
+# Android/iOS Build
 /android/app/debug
 /android/app/profile
 /android/app/release
-pubspec.lock
 
-# Web/Desktop compilation
-macos/Flutter/GeneratedPluginRegistrant.swift
-windows/flutter/generated_plugin_registrant.cc
-windows/flutter/generated_plugins.cmake
-
-# ==========================================
-# SECRETS & SECURITY (CRITICAL!)
-# ==========================================
+# Security (Critical!)
 .env
 *.keystore
 *.jks
-google-services.json
-GoogleService-Info.plist
-
-# Proteksi API Key di AppConstants
 lib/core/constants/app_constants.dart
 *constant*.dart
-*constants*.dart
 
-# ==========================================
-# NODE.JS / INTEGRATION TESTING TOOLS
-# ==========================================
+# Node.js / Automation
 node_modules/
 package-lock.json
-package.json
 npm-debug.log*

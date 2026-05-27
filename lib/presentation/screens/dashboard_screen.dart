@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../core/theme/app_colors.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../bloc/theme_cubit.dart';
@@ -42,15 +43,13 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   Future<void> _loadData() async {
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
-      context.read<ProfileBloc>().add(LoadProfileRequested(authState.user.id));
-      
-      final logs = await _foodRepo.getRecentLogs(authState.user.id, limit: 3);
-      if (mounted) {
-        setState(() {
-          _todayLogs = logs;
-          _isLoadingLogs = false;
-        });
-      }
+      // PRE-FETCHING DATA IN PARALLEL 🚀
+      await Future.wait([
+        Future.microtask(() => context.read<ProfileBloc>().add(LoadProfileRequested(authState.user.id))),
+        _foodRepo.getRecentLogs(authState.user.id, limit: 3).then((logs) {
+          if (mounted) setState(() { _todayLogs = logs; _isLoadingLogs = false; });
+        }),
+      ]);
     }
   }
 
@@ -87,7 +86,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                       const SizedBox(height: 24),
                       
                       if (_isLoadingLogs)
-                        const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                        _buildShimmerLoading(isDark)
                       else if (_todayLogs.isEmpty)
                         _buildEmptyState(isDark)
                       else
@@ -97,7 +96,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                             padding: const EdgeInsets.only(bottom: 16),
                             child: _stagger(3 + entry.key, _buildArtisticLogItem(context, log, isDark)),
                           );
-                        }).toList(),
+                        }),
                       
                       const SizedBox(height: 100),
                     ],
@@ -196,7 +195,34 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
     );
   }
 
+  Widget _buildShimmerLoading(bool isDark) {
+    return Column(
+      children: List.generate(3, (index) => Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Shimmer.fromColors(
+          baseColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+          highlightColor: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.02),
+          child: Container(
+            height: 100, width: double.infinity,
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(32)),
+          ),
+        ),
+      )),
+    );
+  }
+
   Widget _buildProgressCard(BuildContext context, bool isDark, ProfileState profileState) {
+    if (profileState is ProfileLoading) {
+      return Shimmer.fromColors(
+        baseColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+        highlightColor: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.02),
+        child: Container(
+          height: 280, width: double.infinity,
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(48)),
+        ),
+      );
+    }
+    
     int targetKcal = 2000;
     double proTarget = 150;
     double carbTarget = 200;

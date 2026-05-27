@@ -167,10 +167,10 @@ class _NutritionReviewScreenState extends State<NutritionReviewScreen> with Sing
       crossAxisSpacing: 16,
       childAspectRatio: 2.2,
       children: [
-        _buildNutriItem('CALORIES', '${(widget.initialKcal * portionMultiplier).toInt()}', 'kcal', AppColors.studioIndigo, isDark),
-        _buildNutriItem('PROTEIN', '${(widget.initialProtein * portionMultiplier).toStringAsFixed(1)}', 'g', AppColors.studioIndigo, isDark),
-        _buildNutriItem('CARBS', '${(widget.initialCarbs * portionMultiplier).toStringAsFixed(1)}', 'g', AppColors.energyOrange, isDark),
-        _buildNutriItem('FAT', '${(widget.initialFat * portionMultiplier).toStringAsFixed(1)}', 'g', AppColors.deepRose, isDark),
+        _buildNutriItem('CALORIES', (widget.initialKcal * portionMultiplier).toInt().toString(), 'kcal', AppColors.studioIndigo, isDark),
+        _buildNutriItem('PROTEIN', (widget.initialProtein * portionMultiplier).toStringAsFixed(1), 'g', AppColors.studioIndigo, isDark),
+        _buildNutriItem('CARBS', (widget.initialCarbs * portionMultiplier).toStringAsFixed(1), 'g', AppColors.energyOrange, isDark),
+        _buildNutriItem('FAT', (widget.initialFat * portionMultiplier).toStringAsFixed(1), 'g', AppColors.deepRose, isDark),
       ],
     );
   }

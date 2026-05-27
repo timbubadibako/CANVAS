@@ -205,17 +205,19 @@ class _AIScannerScreenState extends State<AIScannerScreen> with TickerProviderSt
 
   Widget _buildOverlay(BuildContext context) {
     return Center(
-      child: Container(
-        width: 280, height: 280,
-        decoration: BoxDecoration(border: Border.all(color: AppColors.studioIndigo.withValues(alpha: 0.4), width: 1.5), borderRadius: const BorderRadius.only(topLeft: Radius.circular(60), topRight: Radius.circular(40), bottomLeft: Radius.circular(30), bottomRight: Radius.circular(70))),
-        child: Stack(children: [
-          AnimatedBuilder(
-            animation: _scanAnimation,
-            builder: (context, child) {
-              return Positioned(top: 280 * _scanAnimation.value, left: 20, right: 20, child: Container(height: 2, decoration: BoxDecoration(color: AppColors.studioIndigo, boxShadow: [BoxShadow(color: AppColors.studioIndigo.withValues(alpha: 0.5), blurRadius: 10, spreadRadius: 2)])));
-            },
-          ),
-        ]),
+      child: RepaintBoundary( // Optimasi Rendering Animasi
+        child: Container(
+          width: 280, height: 280,
+          decoration: BoxDecoration(border: Border.all(color: AppColors.studioIndigo.withValues(alpha: 0.4), width: 1.5), borderRadius: const BorderRadius.only(topLeft: Radius.circular(60), topRight: Radius.circular(40), bottomLeft: Radius.circular(30), bottomRight: Radius.circular(70))),
+          child: Stack(children: [
+            AnimatedBuilder(
+              animation: _scanAnimation,
+              builder: (context, child) {
+                return Positioned(top: 280 * _scanAnimation.value, left: 20, right: 20, child: Container(height: 2, decoration: BoxDecoration(color: AppColors.studioIndigo, boxShadow: [BoxShadow(color: AppColors.studioIndigo.withValues(alpha: 0.5), blurRadius: 10, spreadRadius: 2)])));
+              },
+            ),
+          ]),
+        ),
       ),
     );
   }
