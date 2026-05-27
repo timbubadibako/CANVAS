@@ -4,12 +4,15 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import 'core/theme/app_theme.dart';
 import 'core/constants/app_constants.dart';
 import 'presentation/screens/auth_screen.dart';
+import 'presentation/screens/preferences_screen.dart';
 import 'presentation/widgets/main_nav_wrapper.dart';
 import 'presentation/bloc/theme_cubit.dart';
 import 'presentation/bloc/auth/auth_bloc.dart';
 import 'presentation/bloc/profile/profile_bloc.dart';
+import 'presentation/bloc/meal_diary/meal_diary_bloc.dart';
 import 'data/repositories/auth_repository_impl.dart';
 import 'data/repositories/profile_repository_impl.dart';
+import 'data/repositories/food_repository_impl.dart';
 import 'data/datasources/gemini_client.dart';
 
 void main() async {
@@ -25,13 +28,15 @@ void main() async {
 
   final authRepository = AuthRepositoryImpl();
   final profileRepository = ProfileRepositoryImpl();
+  final foodRepository = FoodRepositoryImpl();
 
   runApp(
     MultiBlocProvider(
       providers: [
         BlocProvider(create: (context) => ThemeCubit()),
-        BlocProvider(create: (context) => AuthBloc(authRepository)..add(AuthCheckRequested())),
+        BlocProvider(create: (context) => AuthBloc(authRepository, profileRepository)..add(AuthCheckRequested())),
         BlocProvider(create: (context) => ProfileBloc(profileRepository)),
+        BlocProvider(create: (context) => MealDiaryBloc(foodRepository)),
       ],
       child: const CanvasApp(),
     ),
@@ -54,6 +59,9 @@ class CanvasApp extends StatelessWidget {
           home: BlocBuilder<AuthBloc, AuthState>(
             builder: (context, authState) {
               if (authState is AuthAuthenticated) {
+                if (authState.isNewUser) {
+                  return const OnboardingPreferencesScreen();
+                }
                 return const MainNavWrapper();
               } else if (authState is AuthLoading || authState is AuthInitial) {
                 return const Scaffold(

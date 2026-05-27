@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/studio_toast.dart';
 import '../../core/utils/nutrition_calculator.dart';
-import '../widgets/main_nav_wrapper.dart';
 import '../bloc/profile/profile_bloc.dart';
 import '../bloc/auth/auth_bloc.dart';
 import '../../../domain/models/user_profile.dart';
@@ -112,7 +111,8 @@ class _OnboardingPreferencesScreenState extends State<OnboardingPreferencesScree
       listener: (context, state) {
         if (state is ProfileLoaded) {
           StudioToast.show(context, 'MASTERPIECE SAVED TO CLOUD', icon: LucideIcons.cloud);
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MainNavWrapper()));
+          // Beritahu AuthBloc bahwa onboarding sudah selesai
+          context.read<AuthBloc>().add(AuthOnboardingCompleted());
         } else if (state is ProfileFailure) {
           StudioToast.show(context, 'SYNC ERROR: ${state.message}', icon: LucideIcons.alertTriangle);
         }

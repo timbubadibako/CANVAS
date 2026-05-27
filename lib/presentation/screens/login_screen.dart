@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/studio_toast.dart';
 import '../widgets/main_nav_wrapper.dart';
+import 'preferences_screen.dart';
 import '../bloc/auth/auth_bloc.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
@@ -55,8 +56,29 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MainNavWrapper()));
+          print('[LoginScreen] Auth Success. isNewUser: ${state.isNewUser}');
           StudioToast.show(context, 'WELCOME TO STUDIO', icon: LucideIcons.palette);
+          
+          if (state.isNewUser) {
+            Navigator.pushReplacement(
+              context, 
+              MaterialPageRoute(builder: (context) => const OnboardingPreferencesScreen()),
+            );
+          } else {
+            Navigator.pushReplacement(
+              context, 
+              MaterialPageRoute(builder: (context) => const MainNavWrapper()),
+            );
+          }
+        } else if (state is AuthUnauthenticated) {
+          if (state.prefilledEmail != null) {
+            print('[LoginScreen] Received prefilled credentials for ${state.prefilledEmail}');
+            setState(() {
+              _emailController.text = state.prefilledEmail!;
+              _passController.text = state.prefilledPassword ?? "";
+            });
+            print('[LoginScreen] Controllers updated. Email: ${_emailController.text}');
+          }
         } else if (state is AuthFailure) {
           StudioToast.show(context, 'AUTH ERROR: ${state.message}', icon: LucideIcons.alertCircle);
         }

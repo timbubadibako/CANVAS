@@ -11,7 +11,6 @@ import '../screens/ai_scanner_screen.dart';
 import '../screens/stats_screen.dart';
 import '../screens/profile_screen.dart';
 import '../bloc/theme_cubit.dart';
-import '../bloc/auth/auth_bloc.dart';
 import '../bloc/profile/profile_bloc.dart';
 import '../../core/utils/bot_prompt_decorator.dart';
 

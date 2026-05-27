@@ -1,45 +1,65 @@
-# Miscellaneous
+# ==========================================
+# CANVAS Studio - Master Gitignore (2026)
+# ==========================================
+
+# Miscellaneous & OS
 *.class
 *.log
 *.pyc
 *.swp
 .DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
+Thumbs.db
+.history/
 migrate_working_dir/
 
-# IntelliJ related
+# IntelliJ & VS Code
 *.iml
 *.ipr
 *.iws
 .idea/
+.vscode/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Flutter/Dart/Pub related
+# Flutter/Dart/Pub internal
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
+.packages
 .pub-cache/
 .pub/
 /build/
 /coverage/
 
-# Symbolication related
-app.*.symbols
-
-# Obfuscation related
-app.*.map.json
-
-# Android Studio will place build artifacts here
+# Android/iOS Native Build Artifacts
 /android/app/debug
 /android/app/profile
 /android/app/release
+pubspec.lock
+
+# Web/Desktop compilation
+macos/Flutter/GeneratedPluginRegistrant.swift
+windows/flutter/generated_plugin_registrant.cc
+windows/flutter/generated_plugins.cmake
+
+# ==========================================
+# SECRETS & SECURITY (CRITICAL!)
+# ==========================================
+.env
+*.keystore
+*.jks
+google-services.json
+GoogleService-Info.plist
+
+# Proteksi API Key di AppConstants
+lib/core/constants/app_constants.dart
+*constant*.dart
+*constants*.dart
+
+# ==========================================
+# NODE.JS / INTEGRATION TESTING TOOLS
+# ==========================================
+node_modules/
+package-lock.json
+package.json
+npm-debug.log*

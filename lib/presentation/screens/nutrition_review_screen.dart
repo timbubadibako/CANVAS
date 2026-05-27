@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+import 'package:uuid/uuid.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/studio_toast.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import '../../data/repositories/food_repository_impl.dart';
 import '../bloc/theme_cubit.dart';
+import '../bloc/auth/auth_bloc.dart';
 
 class NutritionReviewScreen extends StatefulWidget {
   final String initialName;
@@ -12,7 +15,7 @@ class NutritionReviewScreen extends StatefulWidget {
   final double initialCarbs;
   final double initialFat;
   final double initialWeight;
-  final VoidCallback? onSaveCompleted; // Callback untuk kembali ke Dashboard
+  final VoidCallback? onSaveCompleted;
 
   const NutritionReviewScreen({
     super.key,
@@ -226,14 +229,39 @@ class _NutritionReviewScreenState extends State<NutritionReviewScreen> with Sing
       children: [
         Expanded(
           child: ElevatedButton(
-            onPressed: () {
-              StudioToast.show(context, 'MASTERPIECE SAVED', icon: LucideIcons.checkCircle2);
-              
-              // Pop layar Review
-              Navigator.pop(context);
-              
-              // Trigger kembali ke Dashboard via callback
-              widget.onSaveCompleted?.call();
+            onPressed: () async {
+              final authState = context.read<AuthBloc>().state;
+              if (authState is! AuthAuthenticated) {
+                StudioToast.show(context, 'AUTH ERROR', icon: LucideIcons.alertCircle);
+                return;
+              }
+
+              try {
+                final entry = FoodLogEntry(
+                  id: const Uuid().v4(),
+                  userId: authState.user.id,
+                  foodName: foodName,
+                  totalMassG: widget.initialWeight * portionMultiplier,
+                  caloriesKcal: widget.initialKcal * portionMultiplier,
+                  proteinG: widget.initialProtein * portionMultiplier,
+                  carbsG: widget.initialCarbs * portionMultiplier,
+                  fatG: widget.initialFat * portionMultiplier,
+                  createdAt: DateTime.now(),
+                  imageUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1000&auto=format&fit=crop',
+                );
+
+                await FoodRepositoryImpl().saveFoodLog(entry);
+
+                if (context.mounted) {
+                  StudioToast.show(context, 'MASTERPIECE SAVED', icon: LucideIcons.checkCircle2);
+                  Navigator.pop(context);
+                  widget.onSaveCompleted?.call();
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  StudioToast.show(context, 'SAVE ERROR: $e', icon: LucideIcons.alertTriangle);
+                }
+              }
             },
             child: const Text('LOG TO GALLERY'),
           ),

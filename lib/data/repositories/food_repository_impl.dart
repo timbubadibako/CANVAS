@@ -79,6 +79,16 @@ class FoodRepositoryImpl implements FoodRepository {
 
   @override
   Future<void> saveFoodLog(FoodLogEntry entry) async {
-    // Logic to save will be added when we integrate scanner save button
+    await _supabase.from('food_logs').insert({
+      'user_id': entry.userId,
+      'food_name': entry.foodName,
+      'image_url': entry.imageUrl,
+      'total_mass_g': entry.totalMassG,
+      'calories_kcal': entry.caloriesKcal,
+      'protein_g': entry.proteinG,
+      'carbs_g': entry.carbsG,
+      'fat_g': entry.fatG,
+      'created_at': entry.createdAt.toIso8601String(),
+    });
   }
 }

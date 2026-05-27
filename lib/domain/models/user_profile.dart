@@ -35,6 +35,43 @@ class UserProfile {
     this.dailyFatTarget,
   });
 
+  UserProfile copyWith({
+    String? fullName,
+    String? avatarUrl,
+    String? gender,
+    int? age,
+    int? heightCm,
+    double? weightKg,
+    String? primaryGoal,
+    String? dietaryPalette,
+    String? activityLevel,
+    String? motivation,
+    String? fitnessStrategy,
+    int? dailyCalorieTarget,
+    double? dailyProteinTarget,
+    double? dailyCarbsTarget,
+    double? dailyFatTarget,
+  }) {
+    return UserProfile(
+      id: id,
+      fullName: fullName ?? this.fullName,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      gender: gender ?? this.gender,
+      age: age ?? this.age,
+      heightCm: heightCm ?? this.heightCm,
+      weightKg: weightKg ?? this.weightKg,
+      primaryGoal: primaryGoal ?? this.primaryGoal,
+      dietaryPalette: dietaryPalette ?? this.dietaryPalette,
+      activityLevel: activityLevel ?? this.activityLevel,
+      motivation: motivation ?? this.motivation,
+      fitnessStrategy: fitnessStrategy ?? this.fitnessStrategy,
+      dailyCalorieTarget: dailyCalorieTarget ?? this.dailyCalorieTarget,
+      dailyProteinTarget: dailyProteinTarget ?? this.dailyProteinTarget,
+      dailyCarbsTarget: dailyCarbsTarget ?? this.dailyCarbsTarget,
+      dailyFatTarget: dailyFatTarget ?? this.dailyFatTarget,
+    );
+  }
+
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
       id: json['id'],

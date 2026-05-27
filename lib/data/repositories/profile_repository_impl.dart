@@ -27,12 +27,12 @@ class ProfileRepositoryImpl implements ProfileRepository {
   Future<void> updateAvatar(String userId, String filePath) async {
     final file = File(filePath);
     final fileExt = filePath.split('.').last;
-    final fileName = '$userId-${DateTime.now().millisecondsSinceEpoch}.$fileExt';
-    final path = 'avatars/$fileName';
+    final fileName = '${DateTime.now().millisecondsSinceEpoch}.$fileExt';
+    final path = '$userId/$fileName';
 
-    await _supabase.storage.from('studio_assets').upload(path, file);
+    await _supabase.storage.from('avatars').upload(path, file);
     
-    final imageUrl = _supabase.storage.from('studio_assets').getPublicUrl(path);
+    final imageUrl = _supabase.storage.from('avatars').getPublicUrl(path);
     await _supabase.from('profiles').update({'avatar_url': imageUrl}).eq('id', userId);
   }
 }

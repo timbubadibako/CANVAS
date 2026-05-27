@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/studio_toast.dart';
 import '../bloc/auth/auth_bloc.dart';
-import 'preferences_screen.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -46,13 +45,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
-        if (state is AuthAuthenticated) {
-          Navigator.pushAndRemoveUntil(
-            context, 
-            MaterialPageRoute(builder: (context) => const OnboardingPreferencesScreen()), 
-            (route) => false
-          );
-          StudioToast.show(context, 'PALETTE CREATED', icon: LucideIcons.checkCircle);
+        if (state is AuthUnauthenticated && state.prefilledEmail != null) {
+          print('[AuthFlow] Registration success. Auto-routing back to Login with email: ${state.prefilledEmail}');
+          StudioToast.show(context, 'PALETTE CREATED! PLEASE SIGN IN.', icon: LucideIcons.checkCircle);
+          widget.onBackPressed(); // Menggeser PageView kembali ke layar Login
         } else if (state is AuthFailure) {
           StudioToast.show(context, 'REGISTRATION FAILED: ${state.message}', icon: LucideIcons.alertCircle);
         }

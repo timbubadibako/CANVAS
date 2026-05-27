@@ -11,7 +11,6 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   late PageController _pageController;
-  int _currentPage = 0;
 
   @override
   void initState() {
@@ -30,7 +29,6 @@ class _AuthScreenState extends State<AuthScreen> {
       duration: const Duration(milliseconds: 600),
       curve: Curves.easeOutQuart,
     );
-    setState(() => _currentPage = 1);
   }
 
   void _previousPage() {
@@ -38,28 +36,18 @@ class _AuthScreenState extends State<AuthScreen> {
       duration: const Duration(milliseconds: 600),
       curve: Curves.easeOutQuart,
     );
-    setState(() => _currentPage = 0);
   }
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: _currentPage == 0, // Hanya bisa pop (keluar) jika di halaman Login
-      onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return;
-        if (_currentPage == 1) {
-          _previousPage(); // Jika di Register, balik ke Login dulu
-        }
-      },
-      child: Scaffold(
-        body: PageView(
-          controller: _pageController,
-          physics: const NeverScrollableScrollPhysics(),
-          children: [
-            LoginScreen(onSignUpPressed: _nextPage),
-            RegisterScreen(onBackPressed: _previousPage),
-          ],
-        ),
+    return Scaffold(
+      body: PageView(
+        controller: _pageController,
+        physics: const NeverScrollableScrollPhysics(),
+        children: [
+          LoginScreen(onSignUpPressed: _nextPage),
+          RegisterScreen(onBackPressed: _previousPage),
+        ],
       ),
     );
   }
