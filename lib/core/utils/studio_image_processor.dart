@@ -5,30 +5,16 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../presentation/widgets/studio_cropper_modal.dart';
 
-/// Data class untuk passing ke Isolate
-class _CompressParams {
-  final Uint8List bytes;
-  final int quality;
-  _CompressParams(this.bytes, this.quality);
-}
-
-/// Fungsi top-level untuk Isolate (Heavy Lifting)
-Future<Uint8List> _heavyCompress(Object params) async {
-  final p = params as _CompressParams;
-  return await FlutterImageCompress.compressWithList(
-    p.bytes,
-    quality: p.quality,
-    format: CompressFormat.jpeg,
-  );
-}
-
 class StudioImageProcessor {
-  /// Alur Elit: Flutter Bottom Sheet Cropper -> Background Isolate Compress
+  /// Alur Elit: Flutter Bottom Sheet Cropper -> Standard Async Compress
+  /// Catatan: FlutterImageCompress secara internal sudah berjalan di background thread native.
   static Future<File?> processAvatar(BuildContext context, String inputPath) async {
     try {
+      print('[StudioImageProcessor] Starting avatar processing for: $inputPath');
       final Uint8List inputBytes = await File(inputPath).readAsBytes();
 
       if (!context.mounted) return null;
+      print('[StudioImageProcessor] Opening StudioCropperModal...');
       final Uint8List? croppedBytes = await showModalBottomSheet<Uint8List>(
         context: context,
         isScrollControlled: true,
@@ -36,21 +22,31 @@ class StudioImageProcessor {
         builder: (context) => StudioCropperModal(image: inputBytes),
       );
 
-      if (croppedBytes == null) return null;
+      if (croppedBytes == null) {
+        print('[StudioImageProcessor] Cropping cancelled by user.');
+        return null;
+      }
 
-      // 3. Compression Stage in BACKGROUND ISOLATE (Using compute)
+      print('[StudioImageProcessor] Cropping success. Starting compression...');
+
+      // 3. Compression Stage (Jalan secara asinkron di level Native)
       final dir = await getTemporaryDirectory();
       final targetPath = "${dir.absolute.path}/temp_avatar_${DateTime.now().millisecondsSinceEpoch}.jpg";
 
-      print('[StudioImageProcessor] Offloading compression to background isolate...');
-      final compressedData = await compute(_heavyCompress, _CompressParams(croppedBytes, 70));
+      final compressedData = await FlutterImageCompress.compressWithList(
+        croppedBytes,
+        quality: 70,
+        format: CompressFormat.jpeg,
+      );
+      print('[StudioImageProcessor] Compression finished. Size: ${compressedData.length} bytes');
 
       final resultFile = File(targetPath);
       await resultFile.writeAsBytes(compressedData);
+      print('[StudioImageProcessor] File saved successfully. Returning to Profile Screen.');
 
       return resultFile;
     } catch (e) {
-      print('[StudioImageProcessor] Error: $e');
+      print('[StudioImageProcessor] FATAL ERROR during avatar processing: $e');
       return null;
     }
   }

@@ -5,6 +5,7 @@ import 'core/theme/app_theme.dart';
 import 'core/constants/app_constants.dart';
 import 'presentation/screens/auth_screen.dart';
 import 'presentation/screens/preferences_screen.dart';
+import 'presentation/screens/splash_screen.dart';
 import 'presentation/widgets/main_nav_wrapper.dart';
 import 'presentation/bloc/theme_cubit.dart';
 import 'presentation/bloc/auth/auth_bloc.dart';
@@ -56,7 +57,49 @@ class CanvasApp extends StatelessWidget {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: themeMode,
-          home: BlocBuilder<AuthBloc, AuthState>(
+          home: const RootRouter(),
+        );
+      },
+    );
+  }
+}
+
+class RootRouter extends StatefulWidget {
+  const RootRouter({super.key});
+
+  @override
+  State<RootRouter> createState() => _RootRouterState();
+}
+
+class _RootRouterState extends State<RootRouter> {
+  bool _showSplash = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _hideSplash();
+  }
+
+  void _hideSplash() async {
+    // Tampilkan Splash Screen minimal 3 detik untuk vibransi artistik
+    await Future.delayed(const Duration(seconds: 3));
+    if (mounted) {
+      setState(() {
+        _showSplash = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 800),
+      switchInCurve: Curves.easeInOut,
+      switchOutCurve: Curves.easeInOut,
+      child: _showSplash 
+        ? const SplashScreen(key: ValueKey('splash'))
+        : BlocBuilder<AuthBloc, AuthState>(
+            key: const ValueKey('auth_router'),
             builder: (context, authState) {
               if (authState is AuthAuthenticated) {
                 if (authState.isNewUser) {
@@ -64,15 +107,11 @@ class CanvasApp extends StatelessWidget {
                 }
                 return const MainNavWrapper();
               } else if (authState is AuthLoading || authState is AuthInitial) {
-                return const Scaffold(
-                  body: Center(child: CircularProgressIndicator()),
-                );
+                return const SplashScreen(key: ValueKey('splash_loading'));
               }
               return const AuthScreen();
             },
           ),
-        );
-      },
     );
   }
 }

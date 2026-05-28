@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../core/theme/app_colors.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -23,6 +24,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   
   final FoodRepository _foodRepo = FoodRepositoryImpl();
   List<FoodLogEntry> _todayLogs = [];
+  List<FoodLogEntry> _recentLogs = [];
   bool _isLoadingLogs = true;
 
   @override
@@ -46,16 +48,22 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
       // PRE-FETCHING DATA IN PARALLEL 🚀
       await Future.wait([
         Future.microtask(() => context.read<ProfileBloc>().add(LoadProfileRequested(authState.user.id))),
+        _foodRepo.getTodayLogs(authState.user.id).then((logs) {
+          if (mounted) setState(() { _todayLogs = logs; });
+        }),
         _foodRepo.getRecentLogs(authState.user.id, limit: 3).then((logs) {
-          if (mounted) setState(() { _todayLogs = logs; _isLoadingLogs = false; });
+          if (mounted) setState(() { 
+            _recentLogs = logs; 
+            _isLoadingLogs = false; 
+          });
         }),
       ]);
     }
   }
 
-  double get _consumedKcal => _todayLogs.fold(0, (sum, item) => sum + item.caloriesKcal);
-  double get _consumedProtein => _todayLogs.fold(0, (sum, item) => sum + item.proteinG);
-  double get _consumedCarbs => _todayLogs.fold(0, (sum, item) => sum + item.carbsG);
+  double get _consumedKcal => _todayLogs.fold(0.0, (sum, item) => sum + item.caloriesKcal);
+  double get _consumedProtein => _todayLogs.fold(0.0, (sum, item) => sum + item.proteinG);
+  double get _consumedCarbs => _todayLogs.fold(0.0, (sum, item) => sum + item.carbsG);
 
   @override
   void dispose() {
@@ -87,10 +95,10 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                       
                       if (_isLoadingLogs)
                         _buildShimmerLoading(isDark)
-                      else if (_todayLogs.isEmpty)
+                      else if (_recentLogs.isEmpty)
                         _buildEmptyState(isDark)
                       else
-                        ..._todayLogs.asMap().entries.map((entry) {
+                        ..._recentLogs.asMap().entries.map((entry) {
                           final log = entry.value;
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 16),
@@ -142,8 +150,9 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   }
 
   Widget _buildHeader(BuildContext context, bool isDark, ProfileState profileState) {
-    String name = "Studio Artist";
+    String name = "";
     String? avatar;
+    final String todayDate = DateFormat('MMMM dd').format(DateTime.now()).toUpperCase();
 
     if (profileState is ProfileLoaded) {
       name = profileState.profile.fullName;
@@ -156,7 +165,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('CANVAS DATE: MAY 26', style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            Text('CANVAS DATE: $todayDate', style: Theme.of(context).textTheme.labelLarge?.copyWith(
               color: isDark ? AppColors.slateMuted : AppColors.lightMuted, fontSize: 10
             )),
             const SizedBox(height: 4),
@@ -349,7 +358,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
               Container(
                 height: 60, width: 60,
                 decoration: BoxDecoration(color: isDark ? AppColors.deepSlate : AppColors.lightBackground, borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(15), bottomLeft: Radius.circular(10), bottomRight: Radius.circular(25))),
-                child: Center(child: Text("🖼️", style: const TextStyle(fontSize: 24))),
+                child: Center(child: Text("!!", style: const TextStyle(fontSize: 24))),
               ),
               const SizedBox(width: 20),
               Expanded(

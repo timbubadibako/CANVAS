@@ -25,14 +25,25 @@ class ProfileRepositoryImpl implements ProfileRepository {
 
   @override
   Future<void> updateAvatar(String userId, String filePath) async {
-    final file = File(filePath);
-    final fileExt = filePath.split('.').last;
-    final fileName = '${DateTime.now().millisecondsSinceEpoch}.$fileExt';
-    final path = '$userId/$fileName';
+    try {
+      final file = File(filePath);
+      final fileExt = filePath.split('.').last;
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.$fileExt';
+      final path = '$userId/$fileName';
 
-    await _supabase.storage.from('avatars').upload(path, file);
-    
-    final imageUrl = _supabase.storage.from('avatars').getPublicUrl(path);
-    await _supabase.from('profiles').update({'avatar_url': imageUrl}).eq('id', userId);
+      print('[ProfileRepo] Attempting to upload avatar to storage: $path');
+      await _supabase.storage.from('avatars').upload(path, file);
+      print('[ProfileRepo] Upload successful.');
+      
+      final imageUrl = _supabase.storage.from('avatars').getPublicUrl(path);
+      print('[ProfileRepo] Public URL generated: $imageUrl');
+      
+      print('[ProfileRepo] Updating profiles table for user: $userId');
+      await _supabase.from('profiles').update({'avatar_url': imageUrl}).eq('id', userId);
+      print('[ProfileRepo] Database update successful.');
+    } catch (e) {
+      print('[ProfileRepo] FATAL ERROR in updateAvatar: $e');
+      rethrow;
+    }
   }
 }

@@ -127,6 +127,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
+  Widget _buildLogo() {
+    return Container(
+      padding: const EdgeInsets.all(0),
+      decoration: BoxDecoration(
+        gradient: AppColors.paintGradient,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: AppColors.studioIndigo.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 10))],
+      ),
+      child: Image.asset('assets/images/logo.png', width: 32, height: 32, fit: BoxFit.contain),
+    );
+  }
+
   Widget _buildTextField(BuildContext context, {
     required String label, 
     required String hint, 

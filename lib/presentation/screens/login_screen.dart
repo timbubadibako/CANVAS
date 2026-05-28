@@ -170,17 +170,33 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       },
     );
   }
-
-  Widget _buildLogo() {
-    return Container(
-      height: 80, width: 80,
-      decoration: BoxDecoration(
-        gradient: AppColors.paintGradient, borderRadius: BorderRadius.circular(24),
-        boxShadow: [BoxShadow(color: AppColors.studioIndigo.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 10))],
+Widget _buildLogo() {
+  return Container(
+    // 💡 1. Set lebar dan tinggi Container biar konsisten membentuk squircle/kotak bulat
+    width: 64, 
+    height: 64,
+    decoration: BoxDecoration(
+      // 💡 2. Hapus properti gradient, ganti dengan warna solid (misal hitam atau warna dasar logo lu)
+      color: AppColors.darkSplash, // Sesuaikan dengan background logo.png lu biar menyatu
+      borderRadius: BorderRadius.circular(24),
+      boxShadow: [
+        BoxShadow(
+          color: AppColors.studioIndigo.withValues(alpha: 0.3), 
+          blurRadius: 20, 
+          offset: const Offset(0, 10),
+        )
+      ],
+    ),
+    // 💡 3. Gunakan ClipRRect untuk memotong ujung gambar kotak bawaan logo.png agar ikut membulat penuh
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(24), // Samakan dengan nilai radius BoxDecoration di atas
+      child: Image.asset(
+        'assets/images/logo.png', 
+        fit: BoxFit.cover, // Gunakan BoxFit.cover agar gambar memenuhi seluruh ruang Container
       ),
-      child: const Icon(Icons.palette, color: Colors.white, size: 40),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildTextField(BuildContext context, {
     required String label, 

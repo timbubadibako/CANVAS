@@ -20,6 +20,9 @@ class AppColors {
   static const Color lightText = Color(0xFF1E1B4B);
   static const Color lightMuted = Color(0xFF64748B);
 
+  static const Color darkSplash = Color(0xFF13192C);
+  static const Color lightSplash = Color(0xFFF3F3F4);
+
   // Gradients
   static const LinearGradient paintGradient = LinearGradient(
     colors: [studioIndigo, royalViolet],

@@ -81,20 +81,31 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
   Future<void> _handleImageWorkflow(ImageSource source, String userId) async {
     try {
+      print('[ProfileScreen] Picking image from source: $source');
       final XFile? pickedFile = await _picker.pickImage(source: source);
-      if (pickedFile == null) return;
+      if (pickedFile == null) {
+        print('[ProfileScreen] Image picking cancelled.');
+        return;
+      }
+      
       if (mounted) {
         // Add a small delay to ensure picker activity is fully closed before cropper starts
         await Future.delayed(const Duration(milliseconds: 200));
         
+        print('[ProfileScreen] Entering StudioImageProcessor...');
         final processedFile = await StudioImageProcessor.processAvatar(context, pickedFile.path);
+        
         if (processedFile != null && mounted) {
           _isManualUpdate = true;
+          print('[ProfileScreen] Processed file received. Dispatching UpdateAvatarRequested event.');
           context.read<ProfileBloc>().add(UpdateAvatarRequested(userId, processedFile.path));
+        } else {
+          print('[ProfileScreen] Processed file is NULL. Possibly cancelled or error in processor.');
         }
       }
     } catch (e) {
-      if (mounted) StudioToast.show(context, 'PROCESS ERROR', icon: LucideIcons.alertCircle);
+      print('[ProfileScreen] EXCEPTION in _handleImageWorkflow: $e');
+      if (mounted) StudioToast.show(context, 'PROCESS ERROR: $e', icon: LucideIcons.alertCircle);
     }
   }
 
@@ -390,7 +401,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       decoration: BoxDecoration(color: (isDark ? AppColors.slateCard : AppColors.lightCard).withValues(alpha: _isAccountExpanded ? 0.8 : 0.5), borderRadius: BorderRadius.circular(32), border: Border.all(color: _isAccountExpanded ? AppColors.studioIndigo.withValues(alpha: 0.3) : (isDark ? Colors.transparent : Colors.indigo.withValues(alpha: 0.05)))),
       child: Column(children: [
         GestureDetector(
-          onTap: () => setState(() => _isAccountExpanded = !_isAccountExpanded), behavior: HitTestBehavior.opaque,
+          onTap: () {
+            FocusManager.instance.primaryFocus?.unfocus(); // TUTUP KEYBOARD SAAT COLLAPSE
+            setState(() => _isAccountExpanded = !_isAccountExpanded);
+          }, behavior: HitTestBehavior.opaque,
           child: Row(children: [
             const Icon(LucideIcons.user, color: AppColors.slateMuted, size: 20),
             const SizedBox(width: 20),

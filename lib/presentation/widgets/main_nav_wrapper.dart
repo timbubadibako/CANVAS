@@ -49,7 +49,7 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
   void initState() {
     super.initState();
     _shakeController = AnimationController(duration: const Duration(milliseconds: 1500), vsync: this);
-    _chatRoomController = AnimationController(duration: const Duration(milliseconds: 500), vsync: this);
+    _chatRoomController = AnimationController(duration: const Duration(milliseconds: 250), vsync: this);
 
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
@@ -87,6 +87,14 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
         _chatRoomController.forward();
       });
     }
+  }
+
+  void _closeChat() {
+    FocusManager.instance.primaryFocus?.unfocus(); // TUTUP KEYBOARD SAAT CHAT DITUTUP
+    setState(() {
+      _isChatOpen = false;
+      _chatRoomController.reverse();
+    });
   }
 
   void _sendMessage() async {
@@ -164,9 +172,17 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
         final bool isDark = themeMode == ThemeMode.dark;
         final bool isScannerActive = _currentIndex == 2;
 
+        // HITUNG TINGGI KEYBOARD SECARA MANUAL
         final double keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
         final bool isKeyboardOpen = keyboardHeight > 0;
-        final double botBottomPos = isKeyboardOpen ? (keyboardHeight + 12) : 128;
+        
+        // POSISI DASAR (Saat keyboard tutup, bot harus diatas Nav Bottom)
+        // Nav bottom height (84) + margin (24) = 108. Kita kasih gap dikit jadi 120.
+        final double baseBotPos = 120;
+        final double effectiveBotPos = isKeyboardOpen ? (keyboardHeight + 20) : baseBotPos;
+        
+        // Jendela chat juga harus naik
+        final double effectiveChatPos = isKeyboardOpen ? keyboardHeight : 100;
 
         final List<Widget> screens = [
           DashboardScreen(onNavigateToTab: _setIndex),
@@ -176,44 +192,58 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
           const ProfileScreen(),
         ];
 
-        return PopScope(
-          canPop: _currentIndex == 0 && !_isChatOpen,
-          onPopInvokedWithResult: (didPop, result) {
-            if (didPop) return;
-            if (_isChatOpen) {
-              setState(() {
-                _isChatOpen = false;
-                _chatRoomController.reverse();
-              });
-            } else if (_currentIndex != 0) {
-              _setIndex(0);
-            }
-          },
-          child: Scaffold(
-            resizeToAvoidBottomInset: false,
-            extendBody: true,
-            body: MultiBlocListener(
-              listeners: [
-                BlocListener<AuthBloc, AuthState>(
-                  listener: (context, state) {
-                    if (state is AuthUnauthenticated) {
-                      Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const AuthScreen()), (route) => false);
-                    }
-                  },
-                ),
-              ],
-              child: Stack(
-                children: [
-                  screens[_currentIndex],
-                  if (!isScannerActive) ...[
-                    _buildChatOverlay(isDark, botBottomPos),
-                    if (_activeReminder != null) _buildReminderBubble(isDark, botBottomPos),
-                    _buildFloatingBot(isDark, botBottomPos),
-                  ],
+        return GestureDetector(
+          onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+          child: PopScope(
+            canPop: _currentIndex == 0 && !_isChatOpen,
+            onPopInvokedWithResult: (didPop, result) {
+              if (didPop) return;
+              if (_isChatOpen) {
+                _closeChat();
+              } else if (_currentIndex != 0) {
+                _setIndex(0);
+              }
+            },
+            child: Scaffold(
+              resizeToAvoidBottomInset: false, // PAKSA MATI AGAR TIDAK ADA ELEMENT SCAFFOLD YANG NAIK
+              extendBody: true,
+              body: MultiBlocListener(
+                listeners: [
+                  BlocListener<AuthBloc, AuthState>(
+                    listener: (context, state) {
+                      if (state is AuthUnauthenticated) {
+                        Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const AuthScreen()), (route) => false);
+                      }
+                    },
+                  ),
                 ],
+                child: Stack(
+                  children: [
+                    screens[_currentIndex],
+                    if (!isScannerActive) ...[
+                      // 1. NAVIGASI BAWAH (Di dalam Stack agar tidak kedorong keyboard)
+                      Positioned(
+                        bottom: 0, left: 0, right: 0,
+                        child: _buildBottomNav(isDark),
+                      ),
+                      
+                      // 2. CHAT OVERLAY
+                      _buildChatOverlay(isDark, effectiveChatPos),
+
+                      // 3. FAB (DIATAS CHAT - Z-Index Tinggi)
+                      Positioned(
+                        bottom: 36, left: 0, right: 0,
+                        child: Center(child: _buildFab(isDark)),
+                      ),
+                      
+                      // 4. REMINDER & BOT
+                      if (_activeReminder != null) _buildReminderBubble(isDark, effectiveBotPos),
+                      _buildFloatingBot(isDark, effectiveBotPos),
+                    ],
+                  ],
+                ),
               ),
             ),
-            bottomNavigationBar: isScannerActive ? const SizedBox.shrink() : _buildBottomNav(isDark),
           ),
         );
       },
@@ -222,8 +252,8 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
 
   Widget _buildFloatingBot(bool isDark, double bottomPos) {
     return AnimatedPositioned(
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOutQuart,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOutQuart,
       bottom: bottomPos + 12,
       right: 32,
       child: AnimatedBuilder(
@@ -272,8 +302,8 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
   Widget _buildReminderBubble(bool isDark, double botBottomPos) {
     if (_isChatOpen) return const SizedBox.shrink();
     return AnimatedPositioned(
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOut,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOutQuart,
       bottom: botBottomPos + 76,
       right: 28,
       child: TweenAnimationBuilder<double>(
@@ -304,9 +334,9 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
 
   Widget _buildChatOverlay(bool isDark, double bottomPos) {
     return AnimatedPositioned(
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOut,
-      bottom: bottomPos,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOutQuart,
+      bottom: bottomPos+20,
       right: 28,
       child: ScaleTransition(
         scale: CurvedAnimation(parent: _chatRoomController, curve: Curves.easeOut),
@@ -331,7 +361,7 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
                       const SizedBox(width: 12),
                       const Text('STUDIO ASSISTANT', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1.2)),
                       const Spacer(),
-                      IconButton(onPressed: () => setState(() { _isChatOpen = false; _chatRoomController.reverse(); }), icon: const Icon(LucideIcons.x, size: 16)),
+                      IconButton(onPressed: _closeChat, icon: const Icon(LucideIcons.x, size: 16)),
                     ],
                   ),
                 ),
@@ -419,7 +449,7 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
         children: [
           _buildExpandedNavItem(0, LucideIcons.home, 'Home', isDark),
           _buildExpandedNavItem(1, LucideIcons.layers, 'Diary', isDark),
-          _buildFab(isDark),
+          const SizedBox(width: 72), // SPACE FOR FAB (NOW FLOATING IN STACK)
           _buildExpandedNavItem(3, LucideIcons.barChart2, 'Stats', isDark),
           _buildExpandedNavItem(4, LucideIcons.user, 'Profile', isDark),
         ],

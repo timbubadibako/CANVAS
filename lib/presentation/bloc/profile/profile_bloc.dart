@@ -57,12 +57,15 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     });
 
     on<UpdateAvatarRequested>((event, emit) async {
+      print('[ProfileBloc] Received UpdateAvatarRequested for user: ${event.userId}');
       emit(ProfileLoading());
       try {
         await _profileRepository.updateAvatar(event.userId, event.filePath);
+        print('[ProfileBloc] Avatar updated successfully. Reloading profile...');
         final profile = await _profileRepository.getProfile(event.userId);
         emit(ProfileLoaded(profile));
       } catch (e) {
+        print('[ProfileBloc] ERROR updating avatar: $e');
         emit(ProfileFailure(e.toString()));
       }
     });
