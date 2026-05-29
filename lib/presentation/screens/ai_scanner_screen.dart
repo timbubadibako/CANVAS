@@ -1,8 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/studio_toast.dart';
+import '../bloc/scanner/scanner_bloc.dart';
 import 'nutrition_review_screen.dart';
 
 class AIScannerScreen extends StatefulWidget {
@@ -22,8 +25,6 @@ class _AIScannerScreenState extends State<AIScannerScreen> with TickerProviderSt
   bool _isCameraReady = false;
   bool _hasCameraError = false;
   bool _isFlashOn = false;
-  bool _isProcessing = false;
-  int _captureStep = 0; 
 
   @override
   void initState() {
@@ -45,40 +46,27 @@ class _AIScannerScreenState extends State<AIScannerScreen> with TickerProviderSt
     } catch (e) { setState(() => _hasCameraError = true); }
   }
 
-  void _handleCapture() {
-    if (_captureStep < 2) {
-      setState(() => _captureStep++);
-      final String angle = _captureStep == 1 ? "30°" : "60°";
-      StudioToast.show(context, "CAPTURE FROM $angle", icon: LucideIcons.camera);
-    } else {
-      _startArtisticPipeline();
-    }
-  }
+  Future<void> _handleCapture() async {
+    if (_controller == null || !_controller!.value.isInitialized) return;
 
-  void _startArtisticPipeline() async {
-    setState(() => _isProcessing = true);
-    await Future.delayed(const Duration(seconds: 2));
-    if (mounted) {
-      setState(() {
-        _isProcessing = false;
-        _captureStep = 0; // Reset scanner state for next use
-      });
-      
-      // Navigasi ke Review Screen dengan callback kembali ke Dashboard
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => NutritionReviewScreen(
-            initialName: "Mediterranean Plate",
-            initialKcal: 520,
-            initialProtein: 35.5,
-            initialCarbs: 45.0,
-            initialFat: 12.5,
-            initialWeight: 450,
-            onSaveCompleted: widget.onBackToHome, // Trigger kembali ke Dashboard
-          ),
-        ),
-      );
+    try {
+      final image = await _controller!.takePicture();
+      if (mounted) {
+        context.read<ScannerBloc>().add(ScannerCaptureStepRequested(File(image.path)));
+        
+        final currentState = context.read<ScannerBloc>().state;
+        int nextStep = 0;
+        if (currentState is ScannerCapturing) {
+          nextStep = currentState.step;
+        }
+        
+        if (nextStep < 3) {
+           final String angle = nextStep == 1 ? "30°" : "60°";
+           StudioToast.show(context, "CAPTURE FROM $angle", icon: LucideIcons.camera);
+        }
+      }
+    } catch (e) {
+      StudioToast.show(context, "CAPTURE ERROR", icon: LucideIcons.alertCircle);
     }
   }
 
@@ -91,42 +79,103 @@ class _AIScannerScreenState extends State<AIScannerScreen> with TickerProviderSt
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          if (_isCameraReady && _controller != null)
-            SizedBox.expand(child: CameraPreview(_controller!))
-          else
-            _buildArtisticFallback(),
+    return BlocListener<ScannerBloc, ScannerState>(
+      listener: (context, state) {
+        if (state is ScannerSuccess) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => NutritionReviewScreen(
+                initialName: "Studio Analysis",
+                initialKcal: state.result.calories,
+                initialProtein: state.result.protein,
+                initialCarbs: state.result.carb,
+                initialFat: state.result.fat,
+                initialWeight: state.result.mass,
+                onSaveCompleted: () {
+                  context.read<ScannerBloc>().add(ScannerResetRequested());
+                  widget.onBackToHome?.call();
+                },
+              ),
+            ),
+          );
+        } else if (state is ScannerFailure) {
+          StudioToast.show(context, "ANALYSIS FAILED: ${state.message}", icon: LucideIcons.alertCircle);
+          // Keluar dari scanner jika semua engine gagal
+          context.read<ScannerBloc>().add(ScannerResetRequested());
+          if (widget.onBackToHome != null) {
+            widget.onBackToHome!();
+          } else {
+            Navigator.pop(context);
+          }
+        }
+      },
+      child: BlocBuilder<ScannerBloc, ScannerState>(
+        builder: (context, state) {
+          final bool isProcessing = state is ScannerProcessing;
+          int captureStep = 0;
+          if (state is ScannerCapturing) {
+            captureStep = state.step;
+          }
 
-          if (!_isProcessing) _buildOverlay(context),
-
-          if (_isProcessing) _buildProcessingOverlay(),
-
-          Positioned(
-            top: 60, left: 24, right: 24,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          return Scaffold(
+            backgroundColor: Colors.black,
+            body: Stack(
               children: [
-                _buildRoundBtn(LucideIcons.arrowLeft, widget.onBackToHome ?? () => Navigator.pop(context)),
-                _buildStatusIndicator(context),
-                _buildRoundBtn(_isFlashOn ? LucideIcons.zap : LucideIcons.zapOff, () {}, isActive: _isFlashOn),
+                // FIX CAMERA STRETCHING (V2 - High Performance)
+                if (_isCameraReady && _controller != null)
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      return SizedBox(
+                        width: constraints.maxWidth,
+                        height: constraints.maxHeight,
+                        child: FittedBox(
+                          fit: BoxFit.cover,
+                          child: SizedBox(
+                            width: constraints.maxWidth,
+                            height: constraints.maxWidth * _controller!.value.aspectRatio,
+                            child: CameraPreview(_controller!),
+                          ),
+                        ),
+                      );
+                    },
+                  )
+                else
+                  _buildArtisticFallback(),
+
+                if (!isProcessing) _buildOverlay(context),
+
+                if (isProcessing) _buildProcessingOverlay(),
+
+                Positioned(
+                  top: 60, left: 24, right: 24,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildRoundBtn(LucideIcons.arrowLeft, () {
+                         context.read<ScannerBloc>().add(ScannerResetRequested());
+                         widget.onBackToHome ?? Navigator.pop(context);
+                      }),
+                      _buildStatusIndicator(context),
+                      _buildRoundBtn(_isFlashOn ? LucideIcons.zap : LucideIcons.zapOff, () {}, isActive: _isFlashOn),
+                    ],
+                  ),
+                ),
+
+                if (!isProcessing) Positioned(
+                  bottom: 60, left: 0, right: 0,
+                  child: Column(
+                    children: [
+                      _buildCaptureSteps(captureStep),
+                      const SizedBox(height: 24),
+                      _buildShutterButton(captureStep),
+                    ],
+                  ),
+                ),
               ],
             ),
-          ),
-
-          if (!_isProcessing) Positioned(
-            bottom: 60, left: 0, right: 0,
-            child: Column(
-              children: [
-                _buildCaptureSteps(),
-                const SizedBox(height: 24),
-                _buildShutterButton(),
-              ],
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -152,12 +201,12 @@ class _AIScannerScreenState extends State<AIScannerScreen> with TickerProviderSt
     );
   }
 
-  Widget _buildCaptureSteps() {
+  Widget _buildCaptureSteps(int captureStep) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(3, (index) {
-        final bool isDone = index < _captureStep;
-        final bool isCurrent = index == _captureStep;
+        final bool isDone = index < captureStep;
+        final bool isCurrent = index == captureStep;
         return AnimatedContainer(
           duration: const Duration(milliseconds: 400),
           margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -191,14 +240,14 @@ class _AIScannerScreenState extends State<AIScannerScreen> with TickerProviderSt
     );
   }
 
-  Widget _buildShutterButton() {
+  Widget _buildShutterButton(int captureStep) {
     return GestureDetector(
       onTap: _handleCapture,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         height: 84, width: 84, padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white24, width: 4)),
-        child: Container(decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle), child: Icon(_captureStep == 0 ? LucideIcons.scan : LucideIcons.camera, color: AppColors.deepSlate, size: 28)),
+        child: Container(decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle), child: Icon(captureStep == 0 ? LucideIcons.scan : LucideIcons.camera, color: AppColors.deepSlate, size: 28)),
       ),
     );
   }

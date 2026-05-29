@@ -209,7 +209,7 @@ class _NutritionReviewScreenState extends State<NutritionReviewScreen> with Sing
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text('ADJUST PORTION', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: AppColors.slateMuted, letterSpacing: 1.5)),
-            Text('${(widget.initialWeight * portionMultiplier).toInt()} GRAMS', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: AppColors.studioIndigo)),
+            Text('${(widget.initialWeight * portionMultiplier).toStringAsFixed(1)} GRAMS', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: AppColors.studioIndigo)),
           ],
         ),
         const SizedBox(height: 8),

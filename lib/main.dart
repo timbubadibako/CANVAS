@@ -11,9 +11,12 @@ import 'presentation/bloc/theme_cubit.dart';
 import 'presentation/bloc/auth/auth_bloc.dart';
 import 'presentation/bloc/profile/profile_bloc.dart';
 import 'presentation/bloc/meal_diary/meal_diary_bloc.dart';
+import 'presentation/bloc/scanner/scanner_bloc.dart';
 import 'data/repositories/auth_repository_impl.dart';
 import 'data/repositories/profile_repository_impl.dart';
 import 'data/repositories/food_repository_impl.dart';
+import 'data/services/cloud_inference_service.dart';
+import 'data/services/local_onnx_service.dart';
 import 'data/datasources/gemini_client.dart';
 
 void main() async {
@@ -30,6 +33,8 @@ void main() async {
   final authRepository = AuthRepositoryImpl();
   final profileRepository = ProfileRepositoryImpl();
   final foodRepository = FoodRepositoryImpl();
+  final cloudInference = CloudInferenceService();
+  final localInference = LocalOnnxService();
 
   runApp(
     MultiBlocProvider(
@@ -38,6 +43,7 @@ void main() async {
         BlocProvider(create: (context) => AuthBloc(authRepository, profileRepository)..add(AuthCheckRequested())),
         BlocProvider(create: (context) => ProfileBloc(profileRepository)),
         BlocProvider(create: (context) => MealDiaryBloc(foodRepository)),
+        BlocProvider(create: (context) => ScannerBloc(cloudService: cloudInference, localService: localInference)),
       ],
       child: const CanvasApp(),
     ),

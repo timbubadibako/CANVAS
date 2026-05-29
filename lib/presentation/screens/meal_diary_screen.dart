@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../core/theme/app_colors.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../bloc/theme_cubit.dart';
@@ -114,7 +115,17 @@ class _MealDiaryScreenState extends State<MealDiaryScreen> with SingleTickerProv
             child: BlocBuilder<MealDiaryBloc, MealDiaryState>(
               builder: (context, state) {
                 if (state is MealDiaryLoading) {
-                  return const Center(child: CircularProgressIndicator(color: AppColors.studioIndigo));
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.all(28.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _stagger(0, _buildHeader(context, isDark)),
+                        const SizedBox(height: 40),
+                        _buildShimmerLoading(isDark),
+                      ],
+                    ),
+                  );
                 }
                 
                 if (state is MealDiaryFailure) {
@@ -177,6 +188,22 @@ class _MealDiaryScreenState extends State<MealDiaryScreen> with SingleTickerProv
         const SizedBox(height: 16),
       ];
     }).toList();
+  }
+
+  Widget _buildShimmerLoading(bool isDark) {
+    return Column(
+      children: List.generate(5, (index) => Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Shimmer.fromColors(
+          baseColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+          highlightColor: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.02),
+          child: Container(
+            height: 120, width: double.infinity,
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(40)),
+          ),
+        ),
+      )),
+    );
   }
 
   Widget _buildEmptyState(bool isDark) {
