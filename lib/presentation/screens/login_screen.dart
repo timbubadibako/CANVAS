@@ -43,7 +43,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
   void _submit() {
     if (_formKey.currentState!.validate()) {
-      // Memicu OS untuk menyimpan password
       TextInput.finishAutofillContext();
       context.read<AuthBloc>().add(AuthSignInRequested(_emailController.text, _passController.text));
     }
@@ -56,28 +55,18 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
-          print('[LoginScreen] Auth Success. isNewUser: ${state.isNewUser}');
-          StudioToast.show(context, 'WELCOME TO STUDIO', icon: LucideIcons.palette);
-          
+          StudioToast.show(context, 'WELCOME BACK', icon: LucideIcons.user);
           if (state.isNewUser) {
-            Navigator.pushReplacement(
-              context, 
-              MaterialPageRoute(builder: (context) => const OnboardingPreferencesScreen()),
-            );
+            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const OnboardingPreferencesScreen()));
           } else {
-            Navigator.pushReplacement(
-              context, 
-              MaterialPageRoute(builder: (context) => const MainNavWrapper()),
-            );
+            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MainNavWrapper()));
           }
         } else if (state is AuthUnauthenticated) {
           if (state.prefilledEmail != null) {
-            print('[LoginScreen] Received prefilled credentials for ${state.prefilledEmail}');
             setState(() {
               _emailController.text = state.prefilledEmail!;
               _passController.text = state.prefilledPassword ?? "";
             });
-            print('[LoginScreen] Controllers updated. Email: ${_emailController.text}');
           }
         } else if (state is AuthFailure) {
           StudioToast.show(context, 'AUTH ERROR: ${state.message}', icon: LucideIcons.alertCircle);
@@ -108,13 +97,13 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             const SizedBox(height: 40),
                             Text('Welcome Back', style: Theme.of(context).textTheme.headlineMedium),
                             const SizedBox(height: 8),
-                            Text('Sign in to sync your canvas logs.', style: TextStyle(color: isDark ? AppColors.slateMuted : AppColors.lightMuted, fontSize: 16)),
+                            Text('Sign in to track your nutrition.', style: TextStyle(color: isDark ? AppColors.slateMuted : AppColors.lightMuted, fontSize: 16)),
                             const SizedBox(height: 48),
                             
                             _buildTextField(
                               context, 
-                              label: 'STUDIO EMAIL', 
-                              hint: 'artist@canvas.io', 
+                              label: 'EMAIL ADDRESS', 
+                              hint: 'user@email.com', 
                               controller: _emailController, 
                               autofillHints: const [AutofillHints.email],
                               validator: (v) => (v == null || v.isEmpty) ? 'Email is required' : null
@@ -122,7 +111,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             const SizedBox(height: 24),
                             _buildTextField(
                               context, 
-                              label: 'ACCESS KEY', 
+                              label: 'PASSWORD', 
                               hint: '••••••••', 
                               isPassword: true, 
                               obscureText: _obscurePassword,
@@ -141,13 +130,20 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                   : const Text('SIGN IN'),
                             ),
                             
+                            const SizedBox(height: 16),
+                            
+                            OutlinedButton(
+                              onPressed: () => context.read<AuthBloc>().add(AuthGuestRequested()),
+                              child: const Text('CONTINUE AS GUEST'),
+                            ),
+                            
                             const SizedBox(height: 24),
                             Center(
                               child: TextButton(
                                 onPressed: widget.onSignUpPressed,
                                 child: RichText(
                                   text: TextSpan(
-                                    text: "Don't have a palette? ",
+                                    text: "New user? ",
                                     style: TextStyle(color: isDark ? AppColors.slateMuted : AppColors.lightMuted),
                                     children: [
                                       TextSpan(text: 'Sign Up', style: TextStyle(color: AppColors.studioIndigo, fontWeight: FontWeight.bold)),
@@ -170,30 +166,18 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       },
     );
   }
+
 Widget _buildLogo() {
   return Container(
-    // 💡 1. Set lebar dan tinggi Container biar konsisten membentuk squircle/kotak bulat
-    width: 64, 
-    height: 64,
+    width: 64, height: 64,
     decoration: BoxDecoration(
-      // 💡 2. Hapus properti gradient, ganti dengan warna solid (misal hitam atau warna dasar logo lu)
-      color: AppColors.darkSplash, // Sesuaikan dengan background logo.png lu biar menyatu
+      color: AppColors.darkSplash,
       borderRadius: BorderRadius.circular(24),
-      boxShadow: [
-        BoxShadow(
-          color: AppColors.studioIndigo.withValues(alpha: 0.3), 
-          blurRadius: 20, 
-          offset: const Offset(0, 10),
-        )
-      ],
+      boxShadow: [BoxShadow(color: AppColors.studioIndigo.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 10))],
     ),
-    // 💡 3. Gunakan ClipRRect untuk memotong ujung gambar kotak bawaan logo.png agar ikut membulat penuh
     child: ClipRRect(
-      borderRadius: BorderRadius.circular(24), // Samakan dengan nilai radius BoxDecoration di atas
-      child: Image.asset(
-        'assets/images/logo.png', 
-        fit: BoxFit.cover, // Gunakan BoxFit.cover agar gambar memenuhi seluruh ruang Container
-      ),
+      borderRadius: BorderRadius.circular(24),
+      child: Image.asset('assets/images/logo.png', fit: BoxFit.cover),
     ),
   );
 }

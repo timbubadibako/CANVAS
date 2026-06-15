@@ -27,7 +27,8 @@ class ScannerProcessing extends ScannerState {}
 
 class ScannerSuccess extends ScannerState {
   final NutritionInferenceResult result;
-  ScannerSuccess(this.result);
+  final List<File> images;
+  ScannerSuccess(this.result, this.images);
 }
 
 class ScannerFailure extends ScannerState {
@@ -63,31 +64,20 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
         // All 3 images captured, start inference
         emit(ScannerProcessing());
         try {
-          print('[ScannerBloc] Attempting Cloud Inference (FastAPI)...');
-          try {
-            final result = await _cloudService.predict(
-              imageTop: images[0],
-              imageSide1: images[1],
-              imageSide2: images[2],
-            );
-            emit(ScannerSuccess(result));
-          } catch (cloudError) {
-            print('[ScannerBloc] Cloud Failed: $cloudError. Falling back to Local AI...');
-            
-            // FALLBACK TO LOCAL
-            final localResult = await _localService.predict(
-              imageTop: images[0],
-              imageSide1: images[1],
-              imageSide2: images[2],
-            );
-            emit(ScannerSuccess(localResult));
+          print('[ScannerBloc] Testing Local AI Engine exclusively...');
+          // Langsung ke Local tanpa Cloud fallback
+          final result = await _localService.predict(
+            imageTop: images[0],
+            imageSide1: images[1],
+            imageSide2: images[2],
+          );
+          emit(ScannerSuccess(result, images));
+          } catch (finalError) {
+          print('[ScannerBloc] LOCAL AI ENGINE FAILED: $finalError');
+          emit(ScannerFailure("Local AI failed. Check logcat for details: $finalError"));
           }
-        } catch (finalError) {
-          print('[ScannerBloc] BOTH AI ENGINES FAILED: $finalError');
-          emit(ScannerFailure("Both Cloud and Local AI failed to process. Check your model and connection."));
-        }
-      }
-    });
+          }
+          });
 
     on<ScannerResetRequested>((event, emit) {
       emit(ScannerInitial());

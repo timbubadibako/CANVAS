@@ -359,7 +359,7 @@ class _MainNavWrapperState extends State<MainNavWrapper> with TickerProviderStat
                     children: [
                       const Icon(LucideIcons.bot, color: AppColors.vibrantEmerald, size: 20),
                       const SizedBox(width: 12),
-                      const Text('STUDIO ASSISTANT', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1.2)),
+                      const Text('AI ASSISTANT', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1.2)),
                       const Spacer(),
                       IconButton(onPressed: _closeChat, icon: const Icon(LucideIcons.x, size: 16)),
                     ],

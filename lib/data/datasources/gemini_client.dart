@@ -60,7 +60,7 @@ class GeminiClient {
     try {
       final content = [Content.text(prompt)];
       final response = await _model.generateContent(content);
-      return response.text ?? "I couldn't process that masterpiece.";
+      return response.text ?? "I couldn't process your request.";
     } catch (e) {
       print("[GeminiClient] Chat Error: $e");
       rethrow;
@@ -71,10 +71,10 @@ class GeminiClient {
     try {
       final content = [Content.text("Analyze this: $dataContext")];
       final response = await _insightModel.generateContent(content);
-      return response.text?.trim() ?? "Your progress canvas is expanding.";
+      return response.text?.trim() ?? "Your nutrition progress is evolving.";
     } catch (e) {
       print("[GeminiClient] Insight Error: $e");
-      return "Keep the nutritional balance stable for a better masterpiece.";
+      return "Maintain your nutritional balance for better health.";
     }
   }
 

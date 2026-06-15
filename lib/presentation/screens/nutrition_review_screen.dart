@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -15,6 +16,7 @@ class NutritionReviewScreen extends StatefulWidget {
   final double initialCarbs;
   final double initialFat;
   final double initialWeight;
+  final File? thumbnailFile;
   final VoidCallback? onSaveCompleted;
 
   const NutritionReviewScreen({
@@ -25,6 +27,7 @@ class NutritionReviewScreen extends StatefulWidget {
     required this.initialCarbs,
     required this.initialFat,
     required this.initialWeight,
+    this.thumbnailFile,
     this.onSaveCompleted,
   });
 
@@ -34,14 +37,13 @@ class NutritionReviewScreen extends StatefulWidget {
 
 class _NutritionReviewScreenState extends State<NutritionReviewScreen> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  
-  late String foodName;
+  late TextEditingController _nameController;
   late double portionMultiplier;
   
   @override
   void initState() {
     super.initState();
-    foodName = widget.initialName;
+    _nameController = TextEditingController(text: widget.initialName);
     portionMultiplier = 1.0;
     _controller = AnimationController(duration: const Duration(milliseconds: 1000), vsync: this);
     _controller.forward();
@@ -50,6 +52,7 @@ class _NutritionReviewScreenState extends State<NutritionReviewScreen> with Sing
   @override
   void dispose() {
     _controller.dispose();
+    _nameController.dispose();
     super.dispose();
   }
 
@@ -100,7 +103,7 @@ class _NutritionReviewScreenState extends State<NutritionReviewScreen> with Sing
           icon: Icon(LucideIcons.chevronLeft, color: isDark ? Colors.white : AppColors.lightText),
         ),
         const SizedBox(width: 8),
-        Text('REVIEW MASTERPIECE', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 18, color: isDark ? Colors.white : AppColors.lightText)),
+        Text('REVIEW RESULTS', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 18, color: isDark ? Colors.white : AppColors.lightText)),
       ],
     );
   }
@@ -110,27 +113,22 @@ class _NutritionReviewScreenState extends State<NutritionReviewScreen> with Sing
       height: 220, width: double.infinity,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(48),
-        image: const DecorationImage(
-          image: NetworkImage('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1000&auto=format&fit=crop'),
+        image: DecorationImage(
+          image: widget.thumbnailFile != null 
+              ? FileImage(widget.thumbnailFile!) as ImageProvider
+              : const NetworkImage('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1000&auto=format&fit=crop'),
           fit: BoxFit.cover,
         ),
         boxShadow: [BoxShadow(color: AppColors.studioIndigo.withValues(alpha: 0.2), blurRadius: 30, offset: const Offset(0, 15))],
       ),
       child: Stack(
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(48),
-            child: ColorFiltered(
-              colorFilter: ColorFilter.mode(AppColors.studioIndigo.withValues(alpha: 0.15), BlendMode.color),
-              child: Container(color: Colors.transparent),
-            ),
-          ),
           Positioned(
             bottom: 24, left: 24,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(color: AppColors.studioIndigo, borderRadius: BorderRadius.circular(20)),
-              child: const Text('STUDIO STYLE', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1)),
+              child: const Text('AI SCAN RESULTS', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1)),
             ),
           ),
         ],
@@ -145,8 +143,7 @@ class _NutritionReviewScreenState extends State<NutritionReviewScreen> with Sing
         Text('IDENTIFIED AS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: AppColors.slateMuted, letterSpacing: 1.5)),
         const SizedBox(height: 12),
         TextField(
-          onChanged: (v) => foodName = v,
-          controller: TextEditingController(text: foodName),
+          controller: _nameController,
           style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: isDark ? Colors.white : AppColors.lightText),
           decoration: InputDecoration(
             filled: true, fillColor: isDark ? AppColors.slateCard : Colors.white,
@@ -202,6 +199,9 @@ class _NutritionReviewScreenState extends State<NutritionReviewScreen> with Sing
   }
 
   Widget _buildPortionSlider(bool isDark) {
+    // Fallback display if mass is 0
+    final double displayMass = widget.initialWeight > 0 ? (widget.initialWeight * portionMultiplier) : (100 * portionMultiplier);
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -209,7 +209,7 @@ class _NutritionReviewScreenState extends State<NutritionReviewScreen> with Sing
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text('ADJUST PORTION', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: AppColors.slateMuted, letterSpacing: 1.5)),
-            Text('${(widget.initialWeight * portionMultiplier).toStringAsFixed(1)} GRAMS', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: AppColors.studioIndigo)),
+            Text('${displayMass.toStringAsFixed(1)} GRAMS', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: AppColors.studioIndigo)),
           ],
         ),
         const SizedBox(height: 8),
@@ -231,7 +231,12 @@ class _NutritionReviewScreenState extends State<NutritionReviewScreen> with Sing
           child: ElevatedButton(
             onPressed: () async {
               final authState = context.read<AuthBloc>().state;
-              if (authState is! AuthAuthenticated) {
+              final String userId;
+              if (authState is AuthAuthenticated) {
+                userId = authState.user.id;
+              } else if (authState is AuthGuest) {
+                userId = 'guest';
+              } else {
                 StudioToast.show(context, 'AUTH ERROR', icon: LucideIcons.alertCircle);
                 return;
               }
@@ -239,21 +244,21 @@ class _NutritionReviewScreenState extends State<NutritionReviewScreen> with Sing
               try {
                 final entry = FoodLogEntry(
                   id: const Uuid().v4(),
-                  userId: authState.user.id,
-                  foodName: foodName,
-                  totalMassG: widget.initialWeight * portionMultiplier,
+                  userId: userId,
+                  foodName: _nameController.text,
+                  totalMassG: widget.initialWeight > 0 ? (widget.initialWeight * portionMultiplier) : (100 * portionMultiplier),
                   caloriesKcal: widget.initialKcal * portionMultiplier,
                   proteinG: widget.initialProtein * portionMultiplier,
                   carbsG: widget.initialCarbs * portionMultiplier,
                   fatG: widget.initialFat * portionMultiplier,
                   createdAt: DateTime.now(),
-                  imageUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1000&auto=format&fit=crop',
+                  imageUrl: widget.thumbnailFile?.path,
                 );
 
                 await FoodRepositoryImpl().saveFoodLog(entry);
 
                 if (context.mounted) {
-                  StudioToast.show(context, 'MASTERPIECE SAVED', icon: LucideIcons.checkCircle2);
+                  StudioToast.show(context, 'MEAL LOGGED', icon: LucideIcons.checkCircle2);
                   Navigator.pop(context);
                   widget.onSaveCompleted?.call();
                 }
@@ -263,7 +268,7 @@ class _NutritionReviewScreenState extends State<NutritionReviewScreen> with Sing
                 }
               }
             },
-            child: const Text('LOG TO GALLERY'),
+            child: const Text('SAVE MEAL LOG'),
           ),
         ),
       ],

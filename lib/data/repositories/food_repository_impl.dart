@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'local_food_repository_impl.dart';
 
 class FoodLogEntry {
   final String id;
@@ -39,12 +40,28 @@ class FoodLogEntry {
       createdAt: DateTime.parse(json['created_at']),
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'user_id': userId,
+      'food_name': foodName,
+      'image_url': imageUrl,
+      'total_mass_g': totalMassG,
+      'calories_kcal': caloriesKcal,
+      'protein_g': proteinG,
+      'carbs_g': carbsG,
+      'fat_g': fatG,
+      'created_at': createdAt.toIso8601String(),
+    };
+  }
 }
 
 abstract class FoodRepository {
   Future<List<FoodLogEntry>> getTodayLogs(String userId);
   Future<List<FoodLogEntry>> getRecentLogs(String userId, {int limit = 5});
   Future<void> saveFoodLog(FoodLogEntry entry);
+  Future<void> deleteFoodLog(String logId, String userId); // Tambah method hapus
 }
 
 class FoodRepositoryImpl implements FoodRepository {
@@ -52,6 +69,9 @@ class FoodRepositoryImpl implements FoodRepository {
 
   @override
   Future<List<FoodLogEntry>> getTodayLogs(String userId) async {
+    if (userId == 'guest') {
+      return await LocalFoodRepositoryImpl().getTodayLogs(userId);
+    }
     final now = DateTime.now();
     final todayStart = DateTime(now.year, now.month, now.day).toIso8601String();
     
@@ -67,6 +87,9 @@ class FoodRepositoryImpl implements FoodRepository {
 
   @override
   Future<List<FoodLogEntry>> getRecentLogs(String userId, {int limit = 5}) async {
+    if (userId == 'guest') {
+      return await LocalFoodRepositoryImpl().getRecentLogs(userId, limit: limit);
+    }
     final response = await _supabase
         .from('food_logs')
         .select()
@@ -79,16 +102,19 @@ class FoodRepositoryImpl implements FoodRepository {
 
   @override
   Future<void> saveFoodLog(FoodLogEntry entry) async {
-    await _supabase.from('food_logs').insert({
-      'user_id': entry.userId,
-      'food_name': entry.foodName,
-      'image_url': entry.imageUrl,
-      'total_mass_g': entry.totalMassG,
-      'calories_kcal': entry.caloriesKcal,
-      'protein_g': entry.proteinG,
-      'carbs_g': entry.carbsG,
-      'fat_g': entry.fatG,
-      'created_at': entry.createdAt.toIso8601String(),
-    });
+    if (entry.userId == 'guest') {
+      await LocalFoodRepositoryImpl().saveFoodLog(entry);
+      return;
+    }
+    await _supabase.from('food_logs').insert(entry.toJson());
+  }
+
+  @override
+  Future<void> deleteFoodLog(String logId, String userId) async {
+    if (userId == 'guest') {
+      await LocalFoodRepositoryImpl().deleteFoodLog(logId, userId);
+      return;
+    }
+    await _supabase.from('food_logs').delete().eq('id', logId);
   }
 }

@@ -17,49 +17,50 @@ Dokumen ini berfungsi sebagai papan pelacak progres pengerjaan proyek CANVAS yan
 - [x] Inisialisasi proyek Flutter menggunakan Clean Architecture.
 - [x] Susun struktur folder paket sesuai panduan `PROJECT_ARCHITECTURE.md`.
 - [x] Pasang dependensi utama (`flutter_bloc`, `supabase_flutter`, `image_picker`, `google_generative_ai`, `shared_preferences`, `shimmer`).
-- [x] Implementasi **Artistic Studio Theme** (Persistensi tema Light/Dark aktif).
+- [x] Implementasi **Professional Functional Theme** (Persistensi tema Light/Dark aktif).
 - [x] Buat halaman `LoginScreen` dan `RegisterScreen` dengan Logo adaptif & Autofill.
 - [x] Implementasikan **Smart Auth Flow**: Registrasi -> Login -> Auto-detect New User -> Onboarding.
+- [x] **Guest Mode Support:** Menambahkan akses masuk tanpa akun dengan fitur lokal penuh.
 
 ---
 
-## 📅 FASE 2: Model Training, API Gateway & Core UI Integration (PROGRESS: 75%) 🚀
-**Fokus Utama:** Melatih model AI, mendeploy API, dan menghubungkan core scanner kamera.
+## 📅 FASE 2: Core UI Integration & Local Persistence (PROGRESS: 100%) ✅
+**Fokus Utama:** Menghubungkan scanner kamera dan memastikan data tersimpan aman secara lokal.
 
 ### 1. Core Mobile Integration
-- [x] **Dynamic Dashboard:** Visualisasi gizi harian yang otomatis reset setiap hari.
-- [x] **Studio Bottom Sheet Cropper:** Implementasi pemotong gambar 1:1 berbasis Flutter (Anti-Status Bar Bug).
-- [x] **Avatar Management:** Unggah, potong, dan kompres foto profil langsung ke Supabase Storage.
-- [x] **Real-Time Food Logging:** Sambungkan tombol "LOG TO GALLERY" untuk menyimpan data gizi asli ke Supabase.
-- [ ] **CameraBloc:** Refaktor logika kamera ke BLoC (Cleanup `ai_scanner_screen.dart`).
+- [x] **Dynamic Dashboard:** Visualisasi gizi harian yang otomatis reset setiap hari (Sinkronisasi lokal Guest).
+- [x] **BottomSheet Cropper:** Implementasi pemotong gambar 1:1 berbasis Flutter (Anti-Status Bar Bug).
+- [x] **Avatar Management:** Unggah, potong, dan kompres foto profil (Sinkronisasi lokal Guest).
+- [x] **Real-Time Food Logging:** Menyimpan log makanan hasil scan langsung ke memori lokal HP (JSON).
+- [x] **Manual Log Management:** Menambahkan fitur hapus log makanan dari riwayat.
 
-### 2. Backend & AI Integration (NEXT TASK)
-- [ ] **Gemini Vision Integration:** Hubungkan scanner ke Gemini API untuk analisis makanan asli (Bukan Mockup).
-- [ ] **Backend API (FastAPI):** Deploy server untuk melayani Online Mode Inference.
+### 2. Rebranding & UI Cleanup
+- [x] **Indentity Wipe:** Menghapus semua istilah "Studio", "Artist", "Masterpiece", dan "Layers".
+- [x] **English Localization:** Mengubah semua label UI ke Bahasa Inggris fungsional yang lugas.
 
 ---
 
-## 📅 FASE 3: Optimization & Progression Features (PROGRESS: 40%) 🛠️
-**Fokus Utama:** Memperluas kapabilitas aplikasi dan pengujian otomatis.
+## 📅 FASE 3: AI Inference & Analysis (PROGRESS: 100%) ✅
+**Fokus Utama:** Mengaktifkan mesin prediksi nutrisi berbasis ONNX.
 
-### 1. Automation & Analysis
-- [x] **Appium Testing Suite:** Skrip pengujian E2E untuk alur registrasi hingga dashboard.
-- [x] **README Showcase:** Galeri visual premium (Dark/Light) dan dokumentasi Nutrition5k.
-- [x] **Studio Bot Enhancement:** Injeksi konteks gizi real-time (Bot tau apa yang kamu makan hari ini).
+### 1. AI Integration
+- [x] **Dual-Inference Engine:** Implementasi jalur Cloud (FastAPI) dan Lokal (ONNX) dengan fallback otomatis.
+- [x] **FP16/FP32 Sync:** Menangani sinkronisasi tipe data biner antara Flutter dan model ONNX.
+- [x] **Multi-View Preprocessing:** Implementasi Resize 224x224 & Normalisasi ImageNet secara otomatis sebelum inferensi.
+- [x] **Result Calibration:** Menyesuaikan mapping output tensor sesuai standar dataset Nutrition5k.
 
 ### 2. Physical Tracking
-- [x] **Onboarding Preferences:** 5-Step Journey dengan algoritma kalkulasi gizi otomatis.
-- [ ] **Weight Tracker DB Sync:** Hubungkan input berat badan ke tabel `weight_logs` Supabase.
+- [x] **Onboarding Preferences:** 5-Step Journey dengan algoritma kalkulasi gizi otomatis (Local Persistence).
+- [x] **Nutrition Analytics:** Grafik mingguan, BMI, dan Nutritional Balance (PCF) yang terisi dari data lokal.
 
 ---
 
 ## 🚀 PHASE 4: HIGH-PERFORMANCE OPTIMIZATION (PROGRESS: 100%) ✅
-- [x] **Background Isolates:** Kompresi gambar berjalan di Isolate (`compute()`) - 60 FPS.
-- [x] **Repaint Boundaries:** Isolasi rendering animasi scanner (Efisiensi Baterai).
-- [x] **Parallel Pre-fetching:** Loading data profil dan logs secara paralel di Dashboard.
-- [x] **Premium Shimmer UI:** Skeleton loaders mewah di seluruh aplikasi.
+- [x] **Background Processing:** Kompresi gambar dan decoding model berjalan asinkron - 60 FPS.
+- [x] **Memory Management:** Melepaskan (release) tensor input setelah inferensi untuk mencegah memory leak.
+- [x] **Premium UI polish:** Skeleton loaders (Shimmer) di Dashboard dan Diary untuk UX yang halus.
 
 ---
 
-**Last Status Update:** Rabu, 27 Mei 2026, 15:00 WIB
-**Current Focus:** Integrasi Gemini Vision API untuk Real-Time Detection.
+**Status Proyek:** STABLE (Ready for Final Commit)
+**Update Terakhir:** Senin, 15 Juni 2026

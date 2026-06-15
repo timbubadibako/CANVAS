@@ -31,7 +31,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   void _submit() {
     if (_formKey.currentState!.validate()) {
-      // Memicu OS untuk menyimpan password
       TextInput.finishAutofillContext();
       context.read<AuthBloc>().add(
         AuthSignUpRequested(
@@ -50,15 +49,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthUnauthenticated && state.prefilledEmail != null) {
-          print(
-            '[AuthFlow] Registration success. Auto-routing back to Login with email: ${state.prefilledEmail}',
-          );
           StudioToast.show(
             context,
-            'PALETTE CREATED! PLEASE SIGN IN.',
+            'ACCOUNT CREATED! PLEASE SIGN IN.',
             icon: LucideIcons.checkCircle,
           );
-          widget.onBackPressed(); // Menggeser PageView kembali ke layar Login
+          widget.onBackPressed();
         } else if (state is AuthFailure) {
           StudioToast.show(
             context,
@@ -91,12 +87,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       const SizedBox(height: 32),
                       Text(
-                        'New Palette',
+                        'Create Account',
                         style: Theme.of(context).textTheme.headlineMedium,
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Start your journey with CANVAS.',
+                        'Start tracking your nutrition today.',
                         style: TextStyle(
                           color: isDark
                               ? AppColors.slateMuted
@@ -109,7 +105,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       _buildTextField(
                         context,
                         label: 'FULL NAME',
-                        hint: 'Claude Monet',
+                        hint: 'John Doe',
                         controller: _nameController,
                         autofillHints: const [AutofillHints.name],
                         validator: (v) => (v == null || v.isEmpty)
@@ -119,8 +115,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       const SizedBox(height: 24),
                       _buildTextField(
                         context,
-                        label: 'STUDIO EMAIL',
-                        hint: 'artist@canvas.io',
+                        label: 'EMAIL ADDRESS',
+                        hint: 'user@email.com',
                         controller: _emailController,
                         autofillHints: const [
                           AutofillHints.newUsername,
@@ -133,7 +129,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       const SizedBox(height: 24),
                       _buildTextField(
                         context,
-                        label: 'ACCESS KEY',
+                        label: 'PASSWORD',
                         hint: '••••••••',
                         isPassword: true,
                         obscureText: _obscurePassword,

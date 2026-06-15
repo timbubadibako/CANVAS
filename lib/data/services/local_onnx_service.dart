@@ -9,7 +9,7 @@ import '../../domain/services/nutrition_inference_service.dart';
 
 class LocalOnnxService implements NutritionInferenceService {
   OrtSession? _session;
-  final String _assetPath = 'assets/models/canvas_multiview_premium_fp16.onnx';
+  final String _assetPath = 'assets/models/canvas_multiview_premium_fp32.onnx';
 
   Future<void> _initSession() async {
     try {
@@ -79,30 +79,25 @@ class LocalOnnxService implements NutritionInferenceService {
     if (image == null) throw Exception("Failed to decode image");
     final resized = img.copyResize(image, width: 224, height: 224);
 
-    // PREPROCESSING FP16
+    // PREPROCESSING FP32 (Standard)
     final totalPixels = 3 * 224 * 224;
-    final float16Bits = Uint16List(totalPixels);
+    final float32Buffer = Float32List(totalPixels);
 
     for (int y = 0; y < 224; y++) {
       for (int x = 0; x < 224; x++) {
         final pixel = resized.getPixel(x, y);
         
-        // ImageNet Normalization (Float32)
-        double r = ((pixel.r / 255.0) - 0.485) / 0.229;
-        double g = ((pixel.g / 255.0) - 0.456) / 0.224;
-        double b = ((pixel.b / 255.0) - 0.406) / 0.225;
-
-        // Convert to FP16 Bits and store in Uint16List
-        float16Bits[0 * 224 * 224 + y * 224 + x] = _doubleToFloat16(r);
-        float16Bits[1 * 224 * 224 + y * 224 + x] = _doubleToFloat16(g);
-        float16Bits[2 * 224 * 224 + y * 224 + x] = _doubleToFloat16(b);
+        // ImageNet Normalization
+        float32Buffer[0 * 224 * 224 + y * 224 + x] = ((pixel.r / 255.0) - 0.485) / 0.229;
+        float32Buffer[1 * 224 * 224 + y * 224 + x] = ((pixel.g / 255.0) - 0.456) / 0.224;
+        float32Buffer[2 * 224 * 224 + y * 224 + x] = ((pixel.b / 255.0) - 0.406) / 0.225;
       }
     }
 
     final inputName = _session!.inputNames.first;
-    // Use createTensorWithDataList which is available in gtbluesky plugin
+    // Gunakan Float32List, library akan menginferensi sebagai float32
     final inputTensor = OrtValueTensor.createTensorWithDataList(
-      float16Bits,
+      float32Buffer,
       [1, 3, 224, 224],
     );
 
@@ -112,22 +107,33 @@ class LocalOnnxService implements NutritionInferenceService {
     if (outputs.isEmpty) throw Exception("Model returned no results");
 
     final rawOutput = outputs.first?.value;
-    List<double> finalValues = [];
+    print('[LocalOnnx] Raw Output Object: $rawOutput');
+    
+    if (rawOutput == null) {
+      throw Exception("Model returned null output");
+    }
 
-    if (rawOutput is List<double>) {
-      finalValues = rawOutput;
-    } else if (rawOutput is List<num>) {
-      finalValues = rawOutput.map((e) => e.toDouble()).toList();
-    } else if (rawOutput is Uint16List) {
-      // Output is also FP16, convert back to double
-      finalValues = rawOutput.map((bits) => _float16ToDouble(bits)).toList();
+    // Defensif parsing untuk menangani struktur List<List<double>> atau List<double>
+    List<double> finalValues = [];
+    if (rawOutput is List) {
+      var target = rawOutput;
+      if (target.isNotEmpty && target.first is List) {
+        target = target.first as List;
+      }
+      finalValues = target.map((e) => (e as num).toDouble()).toList();
+    } else {
+      throw Exception("Unexpected output type: ${rawOutput.runtimeType}");
+    }
+
+    if (finalValues.length < 5) {
+      throw Exception("Model output too short: ${finalValues.length}");
     }
 
     inputTensor.release();
     
     return NutritionInferenceResult(
-      calories: finalValues[0],
-      mass: finalValues[1],
+      calories: finalValues[0] * 1000,
+      mass: finalValues[1] * 1000,
       fat: finalValues[2],
       carb: finalValues[3],
       protein: finalValues[4],
@@ -135,25 +141,25 @@ class LocalOnnxService implements NutritionInferenceService {
     );
   }
 
-  /// IEEE 754 Half-Precision Conversion (Float32 to Bits)
-  int _doubleToFloat16(double value) {
-    final bdata = ByteData(4)..setFloat32(0, value, Endian.little);
-    int f32 = bdata.getUint32(0, Endian.little);
-    int sign = (f32 >> 16) & 0x8000;
-    int exponent = ((f32 >> 23) & 0xff) - 127;
-    int mantissa = f32 & 0x007fffff;
-    if (exponent <= -15) return sign;
-    if (exponent >= 16) return sign | 0x7c00;
-    return sign | ((exponent + 15) << 10) | (mantissa >> 13);
-  }
+/// IEEE 754 Half-Precision Conversion (Float32 to Bits)
+int _doubleToFloat16(double value) {
+final bdata = ByteData(4)..setFloat32(0, value, Endian.little);
+int f32 = bdata.getUint32(0, Endian.little);
+int sign = (f32 >> 16) & 0x8000;
+int exponent = ((f32 >> 23) & 0xff) - 127;
+int mantissa = f32 & 0x007fffff;
+if (exponent <= -15) return sign;
+if (exponent >= 16) return sign | 0x7c00;
+return sign | ((exponent + 15) << 10) | (mantissa >> 13);
+}
 
-  /// IEEE 754 Half-Precision Conversion (Bits to Double)
-  double _float16ToDouble(int bits) {
-    int sign = (bits & 0x8000) != 0 ? -1 : 1;
-    int exponent = (bits & 0x7c00) >> 10;
-    int mantissa = bits & 0x03ff;
-    if (exponent == 0) return sign * math.pow(2, -14) * (mantissa / 1024.0);
-    if (exponent == 0x1f) return mantissa != 0 ? double.nan : (sign * double.infinity);
-    return sign * math.pow(2, exponent - 15) * (1 + mantissa / 1024.0);
-  }
+/// IEEE 754 Half-Precision Conversion (Bits to Double)
+double _float16ToDouble(int bits) {
+int sign = (bits & 0x8000) != 0 ? -1 : 1;
+int exponent = (bits & 0x7c00) >> 10;
+int mantissa = bits & 0x03ff;
+if (exponent == 0) return sign * math.pow(2, -14) * (mantissa / 1024.0);
+if (exponent == 0x1f) return mantissa != 0 ? double.nan : (sign * double.infinity);
+return sign * math.pow(2, exponent - 15) * (1 + mantissa / 1024.0);
+}
 }

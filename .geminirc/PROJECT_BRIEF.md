@@ -1,23 +1,22 @@
 # Project Brief: CANVAS (Computerized Automated Nutrition & Volume Analysis System)
 
 ## 1. Project Overview
-CANVAS adalah sistem pelacakan nutrisi otomatis multimodal yang dikembangkan untuk mendeteksi jenis makanan sekaligus mengestimasi nilai kalori dan makronutrien (carbs, protein, fat) secara real-time langsung melalui perangkat mobile. 
+CANVAS is a functional automated nutrition tracking system developed to detect food types and estimate caloric/macronutrient values (carbs, protein, fat) in real-time directly through mobile devices.
 
-Proyek ini merupakan implementasi dan adaptasi dari metodologi paper riset "Nutrition5k" (Google Research, 2021) yang membuktikan bahwa integrasi data kedalaman (depth map) untuk menghitung volume skalar makanan dapat memangkas error prediksi hingga mengalahkan kemampuan estimasi visual ahli gizi profesional.
+This project is an implementation and adaptation of the "Nutrition5k" research methodology (Google Research, 2021), focusing on scalar food volume calculation through multi-angle imagery to minimize visual estimation errors.
 
 ## 2. Problem Statement
-- Pelacakan nutrisi konvensional lewat aplikasi seperti MyFitnessPal sangat menyita waktu karena pengguna harus memasukkan tiap komponen porsi secara manual.
-- Estimasi porsi secara visual oleh manusia sangat tidak akurat; masyarakat awam meleset hingga 53% dan ahli gizi profesional pun masih meleset hingga 41% saat menebak kalori lewat mata telanjang.
-- Kamera 2D pada smartphone standar kehilangan informasi spasial (kedalaman/ketebalan makanan), menyebabkan AI komputer visi biasa sering salah membedakan porsi besar dan kecil pada jenis makanan yang sama (Error kalori 2D murni mencapai 26.1%).
+- Manual nutritional tracking is time-consuming and prone to human error.
+- Standard 2D smartphone cameras lack depth information, making it difficult for standard AI to distinguish portion sizes accurately.
+- Professional nutritionists often misestimate caloric values visually by up to 41%, while casual users deviate by over 50%.
 
-## 3. Core Objectives & Scope
-- **Automated Food Logging:** Menggantikan input teks manual dengan pemindaian kamera pintar berbasis machine learning.
-- **Volume-Assisted Estimation:** Mengintegrasikan komputasi depth data (LiDAR/ToF pada iOS flagship) untuk mendapatkan estimasi massa makanan yang presisi dengan target akurasi optimal (Error kalori ~16.5%).
-- **Cross-Platform Fallback:** Menyediakan mekanisme fallback pintar untuk perangkat non-LiDAR (Android/iOS standar) menggunakan regresi langsung dari 1x foto RGB (Error kalori ~26.1%).
-- **Hybrid AI Execution Engine:** Menyediakan opsi pemrosesan fleksibel:
-  * *Online Mode (Default):* Gambar dikirim via API untuk menjaga ukuran awal aplikasi tetap ringan.
-  * *Offline Local Mode:* User bisa men-download model biner hasil training secara opsional agar proses AI berjalan 100% lokal tanpa internet.
+## 3. Core Objectives
+- **Automated Logging:** Eliminate manual entry through intelligent ML-based camera scanning.
+- **Multi-View Volume Estimation:** Guided 3-angle capture (90°, 30°, 60°) to provide the AI engine with spatial cues for accurate volume regression.
+- **Local-First & Offline Ready:** Full support for Guest Mode where all data, preferences, and AI inference (via ONNX) run locally on the device without requiring cloud connectivity.
+- **Hybrid Inference Architecture:** Intelligent fallback system that attempts cloud-based analysis (FastAPI) first, then seamlessly switches to local on-device models if the network is unavailable.
 
-## 4. Target Audience & Use Cases
-- **Fitness & Bodybuilding Enthusiasts:** Mempermudah tracking surplus/defisit kalori dan pemenuhan target protein harian secara presisi.
-- **Medical & Diet Care:** Membantu kontrol porsi karbohidrat dan lemak harian tanpa ketergantungan penuh pada timbangan digital fisik.
+## 4. Key Use Cases
+- **Dietary Tracking:** Simple, fast meal logging for weight loss or muscle gain.
+- **Nutritional Awareness:** Helping users understand the macronutrient composition of their meals through visual analysis.
+- **Guest Access:** Immediate utility without the friction of account creation, ensuring privacy and speed.

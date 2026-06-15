@@ -22,7 +22,7 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
   final FoodRepository _foodRepo = FoodRepositoryImpl();
   
   List<FoodLogEntry> _allLogs = [];
-  String _aiInsight = "Analyzing your masterpiece...";
+  String _aiInsight = "Analyzing your nutrition data...";
   bool _isGeneratingInsight = false;
 
   @override
@@ -35,14 +35,21 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
 
   Future<void> _loadData() async {
     final authState = context.read<AuthBloc>().state;
+    final String userId;
     if (authState is AuthAuthenticated) {
-      final logs = await _foodRepo.getRecentLogs(authState.user.id, limit: 100);
-      if (mounted) {
-        setState(() {
-          _allLogs = logs;
-        });
-        _generateAIInsight();
-      }
+      userId = authState.user.id;
+    } else if (authState is AuthGuest) {
+      userId = 'guest';
+    } else {
+      return;
+    }
+
+    final logs = await _foodRepo.getRecentLogs(userId, limit: 100);
+    if (mounted) {
+      setState(() {
+        _allLogs = logs;
+      });
+      _generateAIInsight();
     }
   }
 
@@ -54,7 +61,6 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
     final lastDate = prefs.getString('last_insight_date');
     final cachedInsight = prefs.getString('cached_insight');
 
-    // Jika hari ini sudah ada insight, gunakan yang lama (Sekali Sehari)
     if (lastDate == today && cachedInsight != null) {
       if (mounted) {
         setState(() {
@@ -64,19 +70,21 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
       return;
     }
 
-    // Jika ganti hari, minta AI generate baru
     setState(() => _isGeneratingInsight = true);
 
     final profileState = context.read<ProfileBloc>().state;
+    int targetKcal = 2000;
+    String strategy = "Maintenance";
+
     if (profileState is ProfileLoaded) {
-      final p = profileState.profile;
-      final bmi = (p.weightKg ?? 70) / (((p.heightCm ?? 170) / 100) * ((p.heightCm ?? 170) / 100));
+      targetKcal = profileState.profile.dailyCalorieTarget;
+      strategy = profileState.profile.fitnessStrategy ?? "Maintenance";
+    }
       
-      final dataContext = "Today: ${_todayKcal.toInt()}/${p.dailyCalorieTarget} kcal. Pro: ${_todayProtein.toInt()}g. BMI: ${bmi.toStringAsFixed(1)}. Strategy: ${p.fitnessStrategy}.";
-      
+    final dataContext = "Today: ${_todayKcal.toInt()}/$targetKcal kcal. Pro: ${_todayProtein.toInt()}g. Strategy: $strategy.";
+    
+    try {
       final insight = await GeminiClient().getStudioInsight(dataContext);
-      
-      // Simpan ke Cache Lokal
       await prefs.setString('last_insight_date', today);
       await prefs.setString('cached_insight', insight);
 
@@ -86,6 +94,8 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
           _isGeneratingInsight = false;
         });
       }
+    } catch (e) {
+      if (mounted) setState(() => _isGeneratingInsight = false);
     }
   }
 
@@ -152,7 +162,7 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                         _stagger(1, _buildMainChartCard(context, isDark, profileState)),
                         const SizedBox(height: 32),
                         
-                        _stagger(2, _buildSectionTitle('Weight Canvas', isDark)),
+                        _stagger(2, _buildSectionTitle('Body Profile', isDark)),
                         const SizedBox(height: 16),
                         _stagger(3, _buildBMICard(isDark, profileState)),
                         
@@ -188,7 +198,7 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
       children: [
         RichText(
           text: TextSpan(
-            text: 'Studio ',
+            text: 'Nutrition ',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: isDark ? Colors.white : AppColors.lightText),
             children: const [TextSpan(text: 'Analytics', style: TextStyle(color: AppColors.studioIndigo))],
           ),
@@ -223,7 +233,7 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
             crossAxisAlignment: CrossAxisAlignment.end, 
             children: last7Days.map((date) {
               double consumed = _getKcalForDate(date);
-              double percent = (consumed / targetKcal).clamp(0, 1.2); 
+              double percent = targetKcal > 0 ? (consumed / targetKcal).clamp(0, 1.2) : 0; 
               bool isToday = DateFormat('yyyy-MM-dd').format(date) == DateFormat('yyyy-MM-dd').format(now);
               return _buildBar(percent, DateFormat('E').format(date), isHighlight: isToday, isDark: isDark);
             }).toList(),
@@ -258,6 +268,9 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
     if (profileState is ProfileLoaded) {
       weight = profileState.profile.weightKg ?? 70.0;
       heightCm = profileState.profile.heightCm?.toDouble() ?? 170.0;
+    } else {
+      final authState = context.read<AuthBloc>().state;
+      if (authState is AuthGuest) { weight = 70.0; heightCm = 170.0; }
     }
 
     double bmi = weight / ((heightCm / 100) * (heightCm / 100));
@@ -274,7 +287,7 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
       child: Column(children: [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('BODY MASS INDEX', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: AppColors.slateMuted, letterSpacing: 1.1)),
+            const Text('BODY MASS INDEX', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: AppColors.slateMuted, letterSpacing: 1.1)),
             const SizedBox(height: 4),
             Text(bmi.toStringAsFixed(1), style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: isDark ? Colors.white : AppColors.lightText)),
           ]),
@@ -380,7 +393,7 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
         ClipRRect(
           borderRadius: BorderRadius.circular(4),
           child: LinearProgressIndicator(
-            value: (current / target).clamp(0, 1.2),
+            value: target > 0 ? (current / target).clamp(0, 1.2) : 0,
             minHeight: 6,
             backgroundColor: isDark ? Colors.white10 : Colors.black12,
             valueColor: AlwaysStoppedAnimation<Color>(color),
@@ -391,7 +404,7 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
   }
 
   Widget _buildCircleStat(String label, double current, double target, Color color, bool isDark) {
-    final double percent = (current / target).clamp(0, 1.2);
+    final double percent = target > 0 ? (current / target).clamp(0, 1.2) : 0;
     return Column(
       children: [
         Stack(

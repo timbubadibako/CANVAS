@@ -27,6 +27,14 @@ void main() async {
     anonKey: AppConstants.supabaseAnonKey,
   );
 
+  // Supabase Health Check
+  try {
+    final response = await Supabase.instance.client.from('profiles').select('*').limit(1);
+    print('✅ Supabase Terkoneksi: $response');
+  } catch (e) {
+    print('❌ Supabase Error: $e');
+  }
+
   // Inisialisasi Otak AI
   GeminiClient().init();
 
@@ -107,8 +115,8 @@ class _RootRouterState extends State<RootRouter> {
         : BlocBuilder<AuthBloc, AuthState>(
             key: const ValueKey('auth_router'),
             builder: (context, authState) {
-              if (authState is AuthAuthenticated) {
-                if (authState.isNewUser) {
+              if (authState is AuthAuthenticated || authState is AuthGuest) {
+                if (authState is AuthAuthenticated && authState.isNewUser) {
                   return const OnboardingPreferencesScreen();
                 }
                 return const MainNavWrapper();

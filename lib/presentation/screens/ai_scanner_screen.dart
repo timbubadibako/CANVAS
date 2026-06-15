@@ -24,7 +24,7 @@ class _AIScannerScreenState extends State<AIScannerScreen> with TickerProviderSt
   
   bool _isCameraReady = false;
   bool _hasCameraError = false;
-  bool _isFlashOn = false;
+  final bool _isFlashOn = false;
 
   @override
   void initState() {
@@ -86,12 +86,13 @@ class _AIScannerScreenState extends State<AIScannerScreen> with TickerProviderSt
             context,
             MaterialPageRoute(
               builder: (context) => NutritionReviewScreen(
-                initialName: "Studio Analysis",
+                initialName: "Analyzed Meal",
                 initialKcal: state.result.calories,
                 initialProtein: state.result.protein,
                 initialCarbs: state.result.carb,
                 initialFat: state.result.fat,
                 initialWeight: state.result.mass,
+                thumbnailFile: state.images.first,
                 onSaveCompleted: () {
                   context.read<ScannerBloc>().add(ScannerResetRequested());
                   widget.onBackToHome?.call();
@@ -100,8 +101,7 @@ class _AIScannerScreenState extends State<AIScannerScreen> with TickerProviderSt
             ),
           );
         } else if (state is ScannerFailure) {
-          StudioToast.show(context, "ANALYSIS FAILED: ${state.message}", icon: LucideIcons.alertCircle);
-          // Keluar dari scanner jika semua engine gagal
+          StudioToast.show(context, "SCAN FAILED: ${state.message}", icon: LucideIcons.alertCircle);
           context.read<ScannerBloc>().add(ScannerResetRequested());
           if (widget.onBackToHome != null) {
             widget.onBackToHome!();
@@ -122,7 +122,6 @@ class _AIScannerScreenState extends State<AIScannerScreen> with TickerProviderSt
             backgroundColor: Colors.black,
             body: Stack(
               children: [
-                // FIX CAMERA STRETCHING (V2 - High Performance)
                 if (_isCameraReady && _controller != null)
                   LayoutBuilder(
                     builder: (context, constraints) {
@@ -192,9 +191,9 @@ class _AIScannerScreenState extends State<AIScannerScreen> with TickerProviderSt
               child: CircularProgressIndicator(color: AppColors.studioIndigo, strokeWidth: 2),
             ),
             const SizedBox(height: 40),
-            Text('APPLYING ARTISTIC BRUSH...', style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppColors.studioIndigo, letterSpacing: 2)),
+            Text('ANALYZING MEAL...', style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppColors.studioIndigo, letterSpacing: 2)),
             const SizedBox(height: 12),
-            const Text('Converting meal into a studio masterpiece', style: TextStyle(color: Colors.white38, fontSize: 12)),
+            const Text('Extracting nutritional data from images', style: TextStyle(color: Colors.white38, fontSize: 12)),
           ],
         ),
       ),
@@ -210,7 +209,7 @@ class _AIScannerScreenState extends State<AIScannerScreen> with TickerProviderSt
         return AnimatedContainer(
           duration: const Duration(milliseconds: 400),
           margin: const EdgeInsets.symmetric(horizontal: 4),
-          height: 4, width: isCurrent ? 24 : 12,
+          height: 4, width: isCurrent ? 32 : 12,
           decoration: BoxDecoration(color: isDone || isCurrent ? AppColors.studioIndigo : Colors.white24, borderRadius: BorderRadius.circular(2)),
         );
       }),
@@ -235,7 +234,7 @@ class _AIScannerScreenState extends State<AIScannerScreen> with TickerProviderSt
       child: Row(children: [
         const CircleAvatar(radius: 3, backgroundColor: AppColors.studioIndigo),
         const SizedBox(width: 8),
-        Text('STUDIO AI ACTIVE', style: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 9, letterSpacing: 1.2, color: Colors.white)),
+        Text('AI SCANNER ACTIVE', style: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 9, letterSpacing: 1.2, color: Colors.white)),
       ]),
     );
   }
@@ -254,7 +253,7 @@ class _AIScannerScreenState extends State<AIScannerScreen> with TickerProviderSt
 
   Widget _buildOverlay(BuildContext context) {
     return Center(
-      child: RepaintBoundary( // Optimasi Rendering Animasi
+      child: RepaintBoundary(
         child: Container(
           width: 280, height: 280,
           decoration: BoxDecoration(border: Border.all(color: AppColors.studioIndigo.withValues(alpha: 0.4), width: 1.5), borderRadius: const BorderRadius.only(topLeft: Radius.circular(60), topRight: Radius.circular(40), bottomLeft: Radius.circular(30), bottomRight: Radius.circular(70))),

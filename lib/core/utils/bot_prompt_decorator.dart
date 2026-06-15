@@ -31,12 +31,12 @@ class BotPromptDecorator {
     final remainingKcal = profile.dailyCalorieTarget - consumedKcal;
 
     return """
-[STUDIO REAL-TIME CONTEXT INJECTION]
-Artist ID: ${profile.id}
+[NUTRITION REAL-TIME CONTEXT INJECTION]
+User ID: ${profile.id}
 Current Physique: $weight kg, $height cm, $age yrs ($gender)
 BMI Analysis: ${bmi.toStringAsFixed(1)} ($bmiStatus)
 
-Studio Progress Today:
+Nutrition Progress Today:
 - Consumed: ${consumedKcal.toInt()} / ${profile.dailyCalorieTarget} kcal (Remaining: ${remainingKcal.toInt()} kcal)
 - Macros (Current/Target):
   * Protein: ${consumedProtein.toInt()}g / ${profile.dailyProteinTarget?.toInt()}g
@@ -46,7 +46,7 @@ Studio Progress Today:
 Current Fitness Strategy: ${strategy.toUpperCase()}
 User Message: "$userMessage"
 
-Operational Command: Use the parameters above to provide precise, supportive, and coach-like advice in Indonesian.
+Operational Command: Use the parameters above to provide precise, supportive, and coach-like advice.
 """;
   }
 }

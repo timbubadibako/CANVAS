@@ -20,11 +20,20 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    // Main entrance animation
+    // Main entrance animation - Kurangi durasi biar snappy (800ms)
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 800),
       vsync: this,
     );
+    
+    // Auto-navigate when animation finishes
+    _controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        // Otomatis pindah halaman atau trigger event di sini
+        // Tapi biasanya main.dart sudah handle via AuthBloc, 
+        // jadi kita cuma perlu memastikan dia cepat selesai
+      }
+    });
 
     // Continuous pulse animation for corners
     _pulseController = AnimationController(

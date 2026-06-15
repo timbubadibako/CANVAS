@@ -1,10 +1,14 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../core/theme/app_colors.dart';
 import '../bloc/theme_cubit.dart';
+import '../bloc/auth/auth_bloc.dart';
+import '../../data/repositories/food_repository_impl.dart';
 
 class MealDetailScreen extends StatefulWidget {
+  final String id;
   final String title;
   final String time;
   final String icon;
@@ -12,10 +16,11 @@ class MealDetailScreen extends StatefulWidget {
   final double protein;
   final double carbs;
   final double fat;
-  final String imageUrl;
+  final String? imageUrl;
 
   const MealDetailScreen({
     super.key,
+    required this.id,
     required this.title,
     required this.time,
     required this.icon,
@@ -23,7 +28,7 @@ class MealDetailScreen extends StatefulWidget {
     required this.protein,
     required this.carbs,
     required this.fat,
-    this.imageUrl = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1000&auto=format&fit=crop',
+    this.imageUrl,
   });
 
   @override
@@ -60,7 +65,6 @@ class _MealDetailScreenState extends State<MealDetailScreen> with SingleTickerPr
         return Scaffold(
           body: CustomScrollView(
             slivers: [
-              // Artistic Header Image
               SliverAppBar(
                 expandedHeight: 350,
                 pinned: true,
@@ -69,7 +73,7 @@ class _MealDetailScreenState extends State<MealDetailScreen> with SingleTickerPr
                   onPressed: () => Navigator.pop(context),
                   icon: Container(
                     padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: Colors.black26, shape: BoxShape.circle),
+                    decoration: const BoxDecoration(color: Colors.black26, shape: BoxShape.circle),
                     child: const Icon(LucideIcons.arrowLeft, color: Colors.white, size: 20),
                   ),
                 ),
@@ -78,8 +82,9 @@ class _MealDetailScreenState extends State<MealDetailScreen> with SingleTickerPr
                   background: Stack(
                     fit: StackFit.expand,
                     children: [
-                      Image.network(widget.imageUrl, fit: BoxFit.cover),
-                      // Gradient Overlay
+                      widget.imageUrl != null 
+                        ? (widget.imageUrl!.startsWith('http') ? Image.network(widget.imageUrl!, fit: BoxFit.cover) : Image.file(File(widget.imageUrl!), fit: BoxFit.cover))
+                        : Image.network('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1000&auto=format&fit=crop', fit: BoxFit.cover),
                       Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
@@ -98,7 +103,7 @@ class _MealDetailScreenState extends State<MealDetailScreen> with SingleTickerPr
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(widget.time.toUpperCase(), style: TextStyle(color: AppColors.studioIndigo, fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 1.5)),
+                            Text(widget.time.toUpperCase(), style: const TextStyle(color: AppColors.studioIndigo, fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 1.5)),
                             const SizedBox(height: 8),
                             Text(widget.title, style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900, color: isDark ? Colors.white : AppColors.lightText)),
                           ],
@@ -108,8 +113,6 @@ class _MealDetailScreenState extends State<MealDetailScreen> with SingleTickerPr
                   ),
                 ),
               ),
-
-              // Content
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 28.0),
@@ -118,7 +121,7 @@ class _MealDetailScreenState extends State<MealDetailScreen> with SingleTickerPr
                     children: [
                       _stagger(0, _buildNutritionSummary(isDark)),
                       const SizedBox(height: 40),
-                      _stagger(1, Text('COMPOSITION LAYERS', style: _sectionStyle(isDark))),
+                      _stagger(1, Text('NUTRITION BREAKDOWN', style: _sectionStyle(isDark))),
                       const SizedBox(height: 20),
                       _stagger(2, _buildCompositionCard(isDark, 'Proteins', widget.protein, 'g', AppColors.studioIndigo, 0.7)),
                       const SizedBox(height: 12),
@@ -206,14 +209,27 @@ class _MealDetailScreenState extends State<MealDetailScreen> with SingleTickerPr
           child: ElevatedButton.icon(
             onPressed: () {},
             icon: const Icon(LucideIcons.share2, size: 18),
-            label: const Text('SHARE MASTERPIECE'),
+            label: const Text('SHARE'),
           ),
         ),
         const SizedBox(width: 16),
-        Container(
-          height: 60, width: 60,
-          decoration: BoxDecoration(color: AppColors.deepRose.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: AppColors.deepRose.withValues(alpha: 0.1))),
-          child: const Icon(LucideIcons.trash2, color: AppColors.deepRose, size: 20),
+        GestureDetector(
+          onTap: () async {
+            final authState = context.read<AuthBloc>().state;
+            final String userId = authState is AuthAuthenticated ? authState.user.id : 'guest';
+
+            await FoodRepositoryImpl().deleteFoodLog(widget.id, userId);
+
+            if (context.mounted) {
+              // Trigger a refresh if possible, or just pop back
+              Navigator.pop(context, true); // Return true to indicate deletion
+            }
+          },
+          child: Container(
+            height: 60, width: 60,
+            decoration: BoxDecoration(color: AppColors.deepRose.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: AppColors.deepRose.withValues(alpha: 0.1))),
+            child: const Icon(LucideIcons.trash2, color: AppColors.deepRose, size: 20),
+          ),
         ),
       ],
     );

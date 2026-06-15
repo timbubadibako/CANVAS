@@ -32,14 +32,13 @@ class _OnboardingPreferencesScreenState extends State<OnboardingPreferencesScree
   String? _motivation;
 
   void _nextStep() {
-    // Validasi Wajib untuk SEMUA STEP
     if (_currentStep == 0 && _selectedGoal == null) {
       StudioToast.show(context, 'PLEASE SELECT A PRIMARY GOAL', icon: LucideIcons.alertCircle);
       return;
     }
     if (_currentStep == 1) {
       if (_gender == null || _age == null || _height == null || _weight == null) {
-        StudioToast.show(context, 'ALL BODY CANVAS DATA REQUIRED', icon: LucideIcons.alertCircle);
+        StudioToast.show(context, 'ALL BODY DATA REQUIRED', icon: LucideIcons.alertCircle);
         return;
       }
     }
@@ -62,7 +61,7 @@ class _OnboardingPreferencesScreenState extends State<OnboardingPreferencesScree
       _pageController.nextPage(duration: const Duration(milliseconds: 600), curve: Curves.easeOutQuart);
       setState(() => _currentStep++);
     } else {
-      _saveProfileToSupabase();
+      _saveProfile();
     }
   }
 
@@ -73,34 +72,35 @@ class _OnboardingPreferencesScreenState extends State<OnboardingPreferencesScree
     }
   }
 
-  void _saveProfileToSupabase() {
+  void _saveProfile() {
     final authState = context.read<AuthBloc>().state;
-    if (authState is AuthAuthenticated) {
-      double bmr = NutritionCalculator.calculateBMR(weightKg: _weight!, heightCm: _height!, age: _age!, gender: _gender!);
-      double tdee = NutritionCalculator.calculateTDEE(bmr: bmr, activityLevel: _activityLevel!);
-      int targetKcal = NutritionCalculator.calculateTargetCalories(tdee: tdee, fitnessStrategy: _strategy!);
-      Map<String, double> macros = NutritionCalculator.calculateMacros(targetCalories: targetKcal, weightKg: _weight!, fitnessStrategy: _strategy!);
+    final String userId = authState is AuthAuthenticated ? authState.user.id : 'guest';
+    final String fullName = (authState is AuthAuthenticated) ? (authState.user.userMetadata?['full_name'] ?? 'User') : 'Guest User';
 
-      final updatedProfile = UserProfile(
-        id: authState.user.id,
-        fullName: authState.user.userMetadata?['full_name'] ?? 'Canvas Artist',
-        gender: _gender,
-        age: _age,
-        heightCm: _height,
-        weightKg: _weight,
-        primaryGoal: _selectedGoal,
-        dietaryPalette: _dietaryStyle,
-        activityLevel: _activityLevel,
-        motivation: _motivation,
-        fitnessStrategy: _strategy?.toLowerCase(),
-        dailyCalorieTarget: targetKcal,
-        dailyProteinTarget: macros['protein'],
-        dailyCarbsTarget: macros['carbs'],
-        dailyFatTarget: macros['fat'],
-      );
+    double bmr = NutritionCalculator.calculateBMR(weightKg: _weight!, heightCm: _height!, age: _age!, gender: _gender!);
+    double tdee = NutritionCalculator.calculateTDEE(bmr: bmr, activityLevel: _activityLevel!);
+    int targetKcal = NutritionCalculator.calculateTargetCalories(tdee: tdee, fitnessStrategy: _strategy!);
+    Map<String, double> macros = NutritionCalculator.calculateMacros(targetCalories: targetKcal, weightKg: _weight!, fitnessStrategy: _strategy!);
 
-      context.read<ProfileBloc>().add(UpdateProfileRequested(updatedProfile));
-    }
+    final updatedProfile = UserProfile(
+      id: userId,
+      fullName: fullName,
+      gender: _gender,
+      age: _age,
+      heightCm: _height,
+      weightKg: _weight,
+      primaryGoal: _selectedGoal,
+      dietaryPalette: _dietaryStyle,
+      activityLevel: _activityLevel,
+      motivation: _motivation,
+      fitnessStrategy: _strategy?.toLowerCase(),
+      dailyCalorieTarget: targetKcal,
+      dailyProteinTarget: macros['protein'],
+      dailyCarbsTarget: macros['carbs'],
+      dailyFatTarget: macros['fat'],
+    );
+
+    context.read<ProfileBloc>().add(UpdateProfileRequested(updatedProfile));
   }
 
   @override
@@ -110,11 +110,10 @@ class _OnboardingPreferencesScreenState extends State<OnboardingPreferencesScree
     return BlocListener<ProfileBloc, ProfileState>(
       listener: (context, state) {
         if (state is ProfileLoaded) {
-          StudioToast.show(context, 'MASTERPIECE SAVED TO CLOUD', icon: LucideIcons.cloud);
-          // Beritahu AuthBloc bahwa onboarding sudah selesai
+          StudioToast.show(context, 'PROFILE SAVED', icon: LucideIcons.check);
           context.read<AuthBloc>().add(AuthOnboardingCompleted());
         } else if (state is ProfileFailure) {
-          StudioToast.show(context, 'SYNC ERROR: ${state.message}', icon: LucideIcons.alertTriangle);
+          StudioToast.show(context, 'SAVE ERROR: ${state.message}', icon: LucideIcons.alertTriangle);
         }
       },
       child: PopScope(
@@ -164,7 +163,7 @@ class _OnboardingPreferencesScreenState extends State<OnboardingPreferencesScree
                               if (state is ProfileLoading) {
                                 return const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2));
                               }
-                              return Text(_currentStep == _totalSteps - 1 ? 'FINISH MASTERPIECE' : 'NEXT STEP');
+                              return Text(_currentStep == _totalSteps - 1 ? 'FINISH' : 'NEXT STEP');
                             },
                           ),
                         ),
@@ -206,7 +205,7 @@ class _OnboardingPreferencesScreenState extends State<OnboardingPreferencesScree
   Widget _buildGoalStep(bool isDark) {
     return _buildStepContainer(
       title: "What's your\nPrimary Goal?",
-      subtitle: "Select the focus of your nutritional canvas.",
+      subtitle: "Select the focus of your nutritional tracking.",
       isDark: isDark,
       child: Column(
         children: [
@@ -222,14 +221,14 @@ class _OnboardingPreferencesScreenState extends State<OnboardingPreferencesScree
 
   Widget _buildStatsStep(bool isDark) {
     return _buildStepContainer(
-      title: "The Body\nCanvas",
+      title: "Your Body\nProfile",
       subtitle: "Age and Gender are critical for calculating your BMR accurately.",
       isDark: isDark,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.end, // Align bottom to match textfield height
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Expanded(
                 flex: 3,
@@ -263,7 +262,7 @@ class _OnboardingPreferencesScreenState extends State<OnboardingPreferencesScree
 
   Widget _buildDietaryStep(bool isDark) {
     return _buildStepContainer(
-      title: "Dietary\nPalette",
+      title: "Activity &\nStyle",
       subtitle: "Daily activity and eating style.",
       isDark: isDark,
       child: Column(
@@ -311,7 +310,7 @@ class _OnboardingPreferencesScreenState extends State<OnboardingPreferencesScree
   Widget _buildStrategyStep(bool isDark) {
     return _buildStepContainer(
       title: "Nutritional\nStrategy",
-      subtitle: "Choose the intensity of your masterpiece.",
+      subtitle: "Choose the intensity of your nutrition plan.",
       isDark: isDark,
       child: Column(
         children: [
@@ -327,7 +326,7 @@ class _OnboardingPreferencesScreenState extends State<OnboardingPreferencesScree
 
   Widget _buildMotivationStep(bool isDark) {
     return _buildStepContainer(
-      title: "Why do you\nCreate?",
+      title: "Why are you\nTracking?",
       subtitle: "This stays between us. Your motivation matters.",
       isDark: isDark,
       child: Column(

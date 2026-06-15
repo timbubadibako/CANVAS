@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/theme/app_colors.dart';
@@ -44,6 +45,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       context.read<ProfileBloc>().add(LoadProfileRequested(authState.user.id));
       _emailController.text = authState.user.email ?? "";
       _loadTodayKcal(authState.user.id);
+    } else if (authState is AuthGuest) {
+      _nameController.text = "Guest User";
+      _emailController.text = "guest@local.app";
+      _loadTodayKcal('guest');
     }
   }
 
@@ -81,31 +86,20 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
   Future<void> _handleImageWorkflow(ImageSource source, String userId) async {
     try {
-      print('[ProfileScreen] Picking image from source: $source');
       final XFile? pickedFile = await _picker.pickImage(source: source);
-      if (pickedFile == null) {
-        print('[ProfileScreen] Image picking cancelled.');
-        return;
-      }
+      if (pickedFile == null) return;
       
       if (mounted) {
-        // Add a small delay to ensure picker activity is fully closed before cropper starts
         await Future.delayed(const Duration(milliseconds: 200));
-        
-        print('[ProfileScreen] Entering StudioImageProcessor...');
         final processedFile = await StudioImageProcessor.processAvatar(context, pickedFile.path);
         
         if (processedFile != null && mounted) {
           _isManualUpdate = true;
-          print('[ProfileScreen] Processed file received. Dispatching UpdateAvatarRequested event.');
           context.read<ProfileBloc>().add(UpdateAvatarRequested(userId, processedFile.path));
-        } else {
-          print('[ProfileScreen] Processed file is NULL. Possibly cancelled or error in processor.');
         }
       }
     } catch (e) {
-      print('[ProfileScreen] EXCEPTION in _handleImageWorkflow: $e');
-      if (mounted) StudioToast.show(context, 'PROCESS ERROR: $e', icon: LucideIcons.alertCircle);
+      if (mounted) StudioToast.show(context, 'PROCESS ERROR', icon: LucideIcons.alertCircle);
     }
   }
 
@@ -124,9 +118,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
             Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Theme.of(context).brightness == Brightness.dark ? Colors.white12 : Colors.black12, borderRadius: BorderRadius.circular(2)))),
             const SizedBox(height: 32),
-            const Text('EDIT STUDIO PROFILE', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 1.5, color: AppColors.studioIndigo)),
+            const Text('EDIT PROFILE', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 1.5, color: AppColors.studioIndigo)),
             const SizedBox(height: 24),
-            _buildInnerField('Artist Name', nameCtrl),
+            _buildInnerField('Full Name', nameCtrl),
             const SizedBox(height: 16),
             Row(children: [
               Expanded(child: _buildInnerField('Age', ageCtrl, isNum: true)),
@@ -143,7 +137,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 context.read<ProfileBloc>().add(UpdateProfileRequested(updated));
                 Navigator.pop(context);
               },
-              child: const Text('SAVE MASTERPIECE'),
+              child: const Text('SAVE CHANGES'),
             ),
             const SizedBox(height: 40),
           ]),
@@ -167,7 +161,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
               Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white12, borderRadius: BorderRadius.circular(2)))),
               const SizedBox(height: 32),
-              const Text('STUDIO PREFERENCES', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: AppColors.studioIndigo, letterSpacing: 1.2)),
+              const Text('NUTRITION PREFERENCES', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: AppColors.studioIndigo, letterSpacing: 1.2)),
               const SizedBox(height: 24),
               _buildSelectionLabel('PRIMARY GOAL'),
               const SizedBox(height: 12),
@@ -196,7 +190,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   context.read<ProfileBloc>().add(UpdateProfileRequested(updated));
                   Navigator.pop(context);
                 },
-                child: const Text('UPDATE CALCULATION'),
+                child: const Text('UPDATE GOALS'),
               ),
               const SizedBox(height: 20),
             ]),
@@ -230,7 +224,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         padding: const EdgeInsets.all(32),
         decoration: BoxDecoration(color: Theme.of(context).scaffoldBackgroundColor, borderRadius: const BorderRadius.vertical(top: Radius.circular(48))),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Text('CHANGE AVATAR', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: AppColors.studioIndigo, letterSpacing: 1.2)),
+          const Text('CHANGE PHOTO', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: AppColors.studioIndigo, letterSpacing: 1.2)),
           const SizedBox(height: 32),
           _buildActionItem(LucideIcons.camera, 'Take New Photo', () { Navigator.pop(context); _handleImageWorkflow(ImageSource.camera, userId); }, isDark: isDark),
           _buildActionItem(LucideIcons.image, 'Choose from Gallery', () { Navigator.pop(context); _handleImageWorkflow(ImageSource.gallery, userId); }, isDark: isDark),
@@ -242,11 +236,14 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
+    final authState = context.watch<AuthBloc>().state;
+    final bool isGuest = authState is AuthGuest;
+
     return BlocListener<ProfileBloc, ProfileState>(
       listener: (context, state) {
         if (state is ProfileLoaded) {
           if (_isManualUpdate) {
-            StudioToast.show(context, 'STUDIO SYNCED', icon: LucideIcons.cloud);
+            StudioToast.show(context, 'PROFILE UPDATED', icon: LucideIcons.check);
             _isManualUpdate = false;
           }
           _nameController.text = state.profile.fullName;
@@ -262,10 +259,18 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             body: SafeArea(
               child: BlocBuilder<ProfileBloc, ProfileState>(
                 builder: (context, state) {
-                  if (state is ProfileLoading) return const Center(child: CircularProgressIndicator());
-                  if (state is ProfileFailure) return _buildErrorState(state.message);
+                  UserProfile? profile;
                   if (state is ProfileLoaded) {
-                    final p = state.profile;
+                    profile = state.profile;
+                  } else if (isGuest) {
+                    profile = UserProfile(id: 'guest', fullName: 'Guest User', dailyCalorieTarget: 2000, fitnessStrategy: 'maintenance');
+                  }
+
+                  if (state is ProfileLoading && !isGuest) return const Center(child: CircularProgressIndicator());
+                  if (state is ProfileFailure && !isGuest) return _buildErrorState(state.message);
+                  
+                  if (profile != null) {
+                    final p = profile;
                     return SingleChildScrollView(
                       padding: const EdgeInsets.all(28.0),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -273,20 +278,20 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                         const SizedBox(height: 32),
                         _stagger(1, _buildPhysicalMatrix(p)),
                         const SizedBox(height: 32),
-                        _stagger(2, Text('GOAL CANVAS', style: _sectionStyle)),
+                        _stagger(2, Text('GOALS', style: _sectionStyle)),
                         const SizedBox(height: 16),
                         _stagger(3, _buildGoalsCard(p)),
                         const SizedBox(height: 32),
-                        _stagger(4, Text('STUDIO SETTINGS', style: _sectionStyle)),
+                        _stagger(4, Text('SETTINGS', style: _sectionStyle)),
                         const SizedBox(height: 16),
-                        _stagger(5, _buildAccountRevealItem(p)),
-                        _stagger(6, _buildSettingItem(LucideIcons.settings2, 'Studio Preferences', 'Update goals & activity', () => _showEditPreferences(p))),
+                        if (!isGuest) _stagger(5, _buildAccountRevealItem(p)),
+                        _stagger(6, _buildSettingItem(LucideIcons.settings2, 'Preferences', 'Update goals & activity', () => _showEditPreferences(p))),
                         _stagger(7, _buildToggleItem(LucideIcons.bell, 'Notifications', 'App reminders & alerts', _notifEnabled, (v) => setState(() => _notifEnabled = v))),
-                        _stagger(8, _buildToggleItem(isDark ? LucideIcons.moon : LucideIcons.sun, 'Studio Theme', isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode', isDark, (v) => context.read<ThemeCubit>().toggleTheme())),
+                        _stagger(8, _buildToggleItem(isDark ? LucideIcons.moon : LucideIcons.sun, 'App Theme', isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode', isDark, (v) => context.read<ThemeCubit>().toggleTheme())),
                         _stagger(9, _buildSettingItem(LucideIcons.shieldCheck, 'Privacy & Data', 'Encryption & Usage Policy', () => _showPrivacyPolicy())),
-                        _stagger(10, _buildSettingItem(LucideIcons.helpCircle, 'Studio FAQ & Docs', 'AI Model, Accuracy, About', () => _showFaqDocs())),
+                        _stagger(10, _buildSettingItem(LucideIcons.helpCircle, 'FAQ & Documentation', 'AI Model, Accuracy, About', () => _showFaqDocs())),
                         const SizedBox(height: 40),
-                        _stagger(11, _buildLogoutBtn()),
+                        _stagger(11, _buildLogoutBtn(isGuest)),
                         const SizedBox(height: 120),
                       ]),
                     );
@@ -306,7 +311,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
         const Icon(LucideIcons.alertTriangle, color: AppColors.deepRose, size: 48),
         const SizedBox(height: 24),
-        Text('CONNECTION FAILED', style: TextStyle(fontWeight: FontWeight.w900, color: AppColors.deepRose, fontSize: 16)),
+        const Text('CONNECTION FAILED', style: TextStyle(fontWeight: FontWeight.w900, color: AppColors.deepRose, fontSize: 16)),
         const SizedBox(height: 8),
         Text(message, textAlign: TextAlign.center, style: TextStyle(color: AppColors.slateMuted, fontSize: 12)),
         const SizedBox(height: 40),
@@ -326,9 +331,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(p.fullName, style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: isDark ? Colors.white : AppColors.lightText)),
         const SizedBox(height: 4),
-        const Text('ELITE CREATOR', style: TextStyle(color: AppColors.studioIndigo, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+        Text(p.id == 'guest' ? 'GUEST MODE' : 'REGISTERED USER', style: const TextStyle(color: AppColors.studioIndigo, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
       ])),
-      GestureDetector(onTap: () => _showEditProfile(p), child: Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(12)), child: const Icon(LucideIcons.edit3, size: 18, color: AppColors.studioIndigo))),
+      if (p.id != 'guest') GestureDetector(onTap: () => _showEditProfile(p), child: Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(12)), child: const Icon(LucideIcons.edit3, size: 18, color: AppColors.studioIndigo))),
     ]);
   }
 
@@ -345,7 +350,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         child: Container(
           decoration: BoxDecoration(color: Theme.of(context).scaffoldBackgroundColor, borderRadius: const BorderRadius.only(topLeft: Radius.circular(33), topRight: Radius.circular(18), bottomLeft: Radius.circular(13), bottomRight: Radius.circular(43))),
           clipBehavior: Clip.antiAlias,
-          child: url != null ? Image.network(url, fit: BoxFit.cover, errorBuilder: (c, e, s) => const Center(child: Icon(LucideIcons.user, color: Colors.white24, size: 32))) : const Center(child: Icon(LucideIcons.user, color: Colors.white24, size: 32)),
+          child: url != null ? (url.startsWith('http') ? Image.network(url, fit: BoxFit.cover, errorBuilder: (c, e, s) => const Center(child: Icon(LucideIcons.user, color: Colors.white24, size: 32))) : Image.file(File(url), fit: BoxFit.cover, errorBuilder: (c, e, s) => const Center(child: Icon(LucideIcons.user, color: Colors.white24, size: 32)))) : const Center(child: Icon(LucideIcons.user, color: Colors.white24, size: 32)),
         ),
       ),
     );
@@ -384,7 +389,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       child: Column(children: [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           const Text('CALORIE TARGET', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-          Text('${_todayKcal.toInt()} / ${p.dailyCalorieTarget} KCAL', style: TextStyle(color: AppColors.studioIndigo, fontWeight: FontWeight.w900, fontSize: 12)),
+          Text('${_todayKcal.toInt()} / ${p.dailyCalorieTarget} KCAL', style: const TextStyle(color: AppColors.studioIndigo, fontWeight: FontWeight.w900, fontSize: 12)),
         ]),
         const SizedBox(height: 16),
         ClipRRect(borderRadius: BorderRadius.circular(4), child: LinearProgressIndicator(value: progress.clamp(0, 1), minHeight: 4, backgroundColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05), valueColor: AlwaysStoppedAnimation<Color>(AppColors.studioIndigo))),
@@ -402,22 +407,22 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       child: Column(children: [
         GestureDetector(
           onTap: () {
-            FocusManager.instance.primaryFocus?.unfocus(); // TUTUP KEYBOARD SAAT COLLAPSE
+            FocusManager.instance.primaryFocus?.unfocus();
             setState(() => _isAccountExpanded = !_isAccountExpanded);
           }, behavior: HitTestBehavior.opaque,
           child: Row(children: [
             const Icon(LucideIcons.user, color: AppColors.slateMuted, size: 20),
             const SizedBox(width: 20),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Account Management', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: isDark ? Colors.white : AppColors.lightText)), Text('Sync, Email, Phone', style: TextStyle(color: AppColors.slateMuted, fontSize: 11))])),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Account Management', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: isDark ? Colors.white : AppColors.lightText)), const Text('Sync, Email, Phone', style: TextStyle(color: AppColors.slateMuted, fontSize: 11))])),
             AnimatedRotation(turns: _isAccountExpanded ? 0.25 : 0, duration: const Duration(milliseconds: 300), child: const Icon(LucideIcons.chevronRight, color: AppColors.slateMuted, size: 16)),
           ]),
         ),
         ClipRect(child: AnimatedAlign(alignment: Alignment.topCenter, duration: const Duration(milliseconds: 500), curve: Curves.easeInOutQuart, heightFactor: _isAccountExpanded ? 1.0 : 0.0, child: Padding(padding: const EdgeInsets.only(top: 24), child: Column(children: [
-          _buildInnerField('STUDIO NAME', _nameController),
+          _buildInnerField('NAME', _nameController),
           const SizedBox(height: 16),
-          _buildInnerField('STUDIO EMAIL', _emailController),
+          _buildInnerField('EMAIL', _emailController),
           const SizedBox(height: 16),
-          _buildInnerField('PHONE NUMBER', _phoneController),
+          _buildInnerField('PHONE', _phoneController),
           const SizedBox(height: 32),
           ElevatedButton(onPressed: () { _isManualUpdate = true; final updated = p.copyWith(fullName: _nameController.text); context.read<ProfileBloc>().add(UpdateProfileRequested(updated)); setState(() => _isAccountExpanded = false); }, style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50)), child: const Text('UPDATE ACCOUNT', style: TextStyle(fontSize: 12))),
         ])))),
@@ -452,10 +457,12 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     );
   }
 
-  Widget _buildLogoutBtn() { return GestureDetector(onTap: _showLogoutConfirmation, child: Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 20), decoration: BoxDecoration(color: AppColors.deepRose.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(24), border: Border.all(color: AppColors.deepRose.withValues(alpha: 0.2))), child: const Center(child: Text('CLOSE STUDIO (LOGOUT)', style: TextStyle(color: AppColors.deepRose, fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 1.2))))); }
+  Widget _buildLogoutBtn(bool isGuest) { return GestureDetector(onTap: _showLogoutConfirmation, child: Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 20), decoration: BoxDecoration(color: AppColors.deepRose.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(24), border: Border.all(color: AppColors.deepRose.withValues(alpha: 0.2))), child: Center(child: Text(isGuest ? 'EXIT GUEST MODE' : 'LOGOUT', style: const TextStyle(color: AppColors.deepRose, fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 1.2))))); }
 
   void _showLogoutConfirmation() {
-    showModalBottomSheet(context: context, backgroundColor: Colors.transparent, builder: (context) => Container(padding: const EdgeInsets.all(40), decoration: BoxDecoration(color: Theme.of(context).scaffoldBackgroundColor, borderRadius: const BorderRadius.vertical(top: Radius.circular(48))), child: Column(mainAxisSize: MainAxisSize.min, children: [const Icon(LucideIcons.logOut, color: AppColors.deepRose, size: 48), const SizedBox(height: 24), Text('CLOSE STUDIO?', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Theme.of(context).brightness == Brightness.dark ? Colors.white : AppColors.lightText)), const SizedBox(height: 40), Row(children: [Expanded(child: TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCEL'))), const SizedBox(width: 16), Expanded(child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: AppColors.deepRose), onPressed: () { context.read<AuthBloc>().add(AuthSignOutRequested()); Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const AuthScreen()), (route) => false); }, child: const Text('LOGOUT')))])])));
+    final authState = context.read<AuthBloc>().state;
+    final bool isGuest = authState is AuthGuest;
+    showModalBottomSheet(context: context, backgroundColor: Colors.transparent, builder: (context) => Container(padding: const EdgeInsets.all(40), decoration: BoxDecoration(color: Theme.of(context).scaffoldBackgroundColor, borderRadius: const BorderRadius.vertical(top: Radius.circular(48))), child: Column(mainAxisSize: MainAxisSize.min, children: [const Icon(LucideIcons.logOut, color: AppColors.deepRose, size: 48), const SizedBox(height: 24), Text(isGuest ? 'EXIT GUEST MODE?' : 'LOGOUT?', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Theme.of(context).brightness == Brightness.dark ? Colors.white : AppColors.lightText)), const SizedBox(height: 40), Row(children: [Expanded(child: TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCEL'))), const SizedBox(width: 16), Expanded(child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: AppColors.deepRose), onPressed: () { context.read<AuthBloc>().add(AuthSignOutRequested()); Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const AuthScreen()), (route) => false); }, child: Text(isGuest ? 'EXIT' : 'LOGOUT')))])])));
   }
 
   Widget _buildActionItem(IconData icon, String label, VoidCallback onTap, {bool isDanger = false, required bool isDark}) {
@@ -475,5 +482,5 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   TextStyle get _sectionStyle => const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: AppColors.slateMuted);
 
   void _showPrivacyPolicy() { showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (context) => Container(height: MediaQuery.of(context).size.height * 0.85, padding: const EdgeInsets.all(32), decoration: BoxDecoration(color: Theme.of(context).scaffoldBackgroundColor, borderRadius: const BorderRadius.vertical(top: Radius.circular(48))), child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('PRIVACY & DATA POLICY', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: AppColors.studioIndigo)), const SizedBox(height: 32), _buildDocSection('Data Encryption', 'All your nutritional logs and physical data are encrypted using industry-standard protocols.'), _buildDocSection('AI Usage', 'Meal photos are analyzed locally or via secured cloud endpoints to estimate volume.'), const SizedBox(height: 40), ElevatedButton(onPressed: () => Navigator.pop(context), child: const Text('I UNDERSTAND'))])))); }
-  void _showFaqDocs() { showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (context) => Container(height: MediaQuery.of(context).size.height * 0.8, padding: const EdgeInsets.all(32), decoration: BoxDecoration(color: Theme.of(context).scaffoldBackgroundColor, borderRadius: const BorderRadius.vertical(top: Radius.circular(48))), child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('STUDIO DOCUMENTATION', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: AppColors.studioIndigo)), const SizedBox(height: 32), _buildDocSection('About Developer', 'Developed by Jri as an artistic take on automated nutrition tracking.'), _buildDocSection('About Accuracy', 'AI regression models have ±10-15% variance based on lighting.'), const SizedBox(height: 40)])))); }
+  void _showFaqDocs() { showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (context) => Container(height: MediaQuery.of(context).size.height * 0.8, padding: const EdgeInsets.all(32), decoration: BoxDecoration(color: Theme.of(context).scaffoldBackgroundColor, borderRadius: const BorderRadius.vertical(top: Radius.circular(48))), child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('DOCUMENTATION', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: AppColors.studioIndigo)), const SizedBox(height: 32), _buildDocSection('About Developer', 'Developed as a high-performance nutrition tracking tool.'), _buildDocSection('About Accuracy', 'AI models have ±10-15% variance based on lighting and angles.'), const SizedBox(height: 40)])))); }
 }

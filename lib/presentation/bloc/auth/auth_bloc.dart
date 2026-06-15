@@ -23,6 +23,8 @@ class AuthSignUpRequested extends AuthEvent {
 
 class AuthSignOutRequested extends AuthEvent {}
 
+class AuthGuestRequested extends AuthEvent {}
+
 class AuthOnboardingCompleted extends AuthEvent {}
 
 // --- States ---
@@ -37,6 +39,8 @@ class AuthAuthenticated extends AuthState {
   final bool isNewUser;
   AuthAuthenticated(this.user, {this.isNewUser = false});
 }
+
+class AuthGuest extends AuthState {} // Tambahkan state Guest
 
 class AuthUnauthenticated extends AuthState {
   final String? prefilledEmail;
@@ -68,13 +72,23 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           print('[AuthBloc] Profile found. isNewUser: $isNew');
           emit(AuthAuthenticated(user, isNewUser: isNew));
         } catch (e) {
-          print('[AuthBloc] Profile fetch failed: $e. Destroying session for safety.');
-          await _authRepository.signOut(); // PAKSA DESTROY SESSION
-          emit(AuthUnauthenticated());
+          print('[AuthBloc] Profile fetch failed: $e. Checking if network error...');
+          // JANGAN LANGSUNG SIGNOUT JIKA NETWORK ERROR
+          if (e.toString().contains('SocketException') || e.toString().contains('Failed host lookup')) {
+            print('[AuthBloc] Network error detected. Keeping session and allowing offline login.');
+            emit(AuthUnauthenticated()); 
+          } else {
+            await _authRepository.signOut();
+            emit(AuthUnauthenticated());
+          }
         }
       } else {
         emit(AuthUnauthenticated());
       }
+    });
+
+    on<AuthGuestRequested>((event, emit) {
+      emit(AuthGuest());
     });
 
     on<AuthSignInRequested>((event, emit) async {

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -19,7 +20,7 @@ class MealDiaryScreen extends StatefulWidget {
 
 class _MealDiaryScreenState extends State<MealDiaryScreen> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  String _selectedFilter = 'All Layers';
+  String _selectedFilter = 'All Logs';
 
   @override
   void initState() {
@@ -32,12 +33,19 @@ class _MealDiaryScreenState extends State<MealDiaryScreen> with SingleTickerProv
 
   void _loadLogs() {
     final authState = context.read<AuthBloc>().state;
+    final String userId;
     if (authState is AuthAuthenticated) {
-      context.read<MealDiaryBloc>().add(LoadMealDiaryRequested(
-        authState.user.id, 
-        filter: _selectedFilter == 'All Layers' ? null : _selectedFilter
-      ));
+      userId = authState.user.id;
+    } else if (authState is AuthGuest) {
+      userId = 'guest';
+    } else {
+      return;
     }
+
+    context.read<MealDiaryBloc>().add(LoadMealDiaryRequested(
+      userId, 
+      filter: _selectedFilter == 'All Logs' ? null : _selectedFilter
+    ));
   }
 
   @override
@@ -62,9 +70,9 @@ class _MealDiaryScreenState extends State<MealDiaryScreen> with SingleTickerProv
           children: [
             Container(width: 40, height: 4, decoration: BoxDecoration(color: isDark ? Colors.white12 : Colors.black12, borderRadius: BorderRadius.circular(2))),
             const SizedBox(height: 32),
-            Text('FILTER LAYERS', style: Theme.of(context).textTheme.labelLarge?.copyWith(color: isDark ? AppColors.slateMuted : AppColors.lightMuted)),
+            Text('FILTER HISTORY', style: Theme.of(context).textTheme.labelLarge?.copyWith(color: isDark ? AppColors.slateMuted : AppColors.lightMuted)),
             const SizedBox(height: 24),
-            _buildFilterOption('All Layers', LucideIcons.layers),
+            _buildFilterOption('All Logs', LucideIcons.list),
             _buildFilterOption('High Protein', LucideIcons.zap),
             _buildFilterOption('Low Carbs', LucideIcons.leaf),
             const SizedBox(height: 16),
@@ -132,7 +140,6 @@ class _MealDiaryScreenState extends State<MealDiaryScreen> with SingleTickerProv
                   return Center(child: Text('Error: ${state.message}'));
                 }
 
-                // Render structure always, regardless if logs are empty
                 return SingleChildScrollView(
                   padding: const EdgeInsets.all(28.0),
                   child: Column(
@@ -213,11 +220,11 @@ class _MealDiaryScreenState extends State<MealDiaryScreen> with SingleTickerProv
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(LucideIcons.layers, size: 64, color: isDark ? Colors.white10 : Colors.black12),
+          Icon(LucideIcons.list, size: 64, color: isDark ? Colors.white10 : Colors.black12),
           const SizedBox(height: 24),
           Text('NO LOGS FOUND', style: TextStyle(color: AppColors.slateMuted, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
           const SizedBox(height: 8),
-          Text('Your canvas is still empty for this layer.', 
+          Text('Your history is currently empty.', 
             style: TextStyle(color: AppColors.slateMuted.withValues(alpha: 0.6), fontSize: 12)),
         ],
       ),
@@ -238,9 +245,9 @@ class _MealDiaryScreenState extends State<MealDiaryScreen> with SingleTickerProv
           children: [
             RichText(
               text: TextSpan(
-                text: 'Meal ',
+                text: 'Nutrition ',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: isDark ? Colors.white : AppColors.lightText),
-                children: const [TextSpan(text: 'Layers', style: TextStyle(color: AppColors.studioIndigo))],
+                children: const [TextSpan(text: 'Diary', style: TextStyle(color: AppColors.studioIndigo))],
               ),
             ),
             Text(_selectedFilter.toUpperCase(), style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: isDark ? AppColors.slateMuted : AppColors.lightMuted, letterSpacing: 1.2)),
@@ -252,11 +259,11 @@ class _MealDiaryScreenState extends State<MealDiaryScreen> with SingleTickerProv
             duration: const Duration(milliseconds: 300),
             height: 48, width: 48,
             decoration: BoxDecoration(
-              color: _selectedFilter != 'All Layers' ? AppColors.studioIndigo : (isDark ? AppColors.slateCard.withValues(alpha: 0.7) : AppColors.lightCard),
+              color: _selectedFilter != 'All Logs' ? AppColors.studioIndigo : (isDark ? AppColors.slateCard.withValues(alpha: 0.7) : AppColors.lightCard),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.indigo.withValues(alpha: 0.1)),
             ),
-            child: Icon(LucideIcons.filter, size: 20, color: _selectedFilter != 'All Layers' ? Colors.white : (isDark ? AppColors.slateMuted : AppColors.lightMuted)),
+            child: Icon(LucideIcons.filter, size: 20, color: _selectedFilter != 'All Logs' ? Colors.white : (isDark ? AppColors.slateMuted : AppColors.lightMuted)),
           ),
         ),
       ],
@@ -284,22 +291,26 @@ class _MealDiaryScreenState extends State<MealDiaryScreen> with SingleTickerProv
 
   Widget _buildDiaryItem(BuildContext context, FoodLogEntry log, bool isDark) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        final result = await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => MealDetailScreen(
+              id: log.id,
               title: log.foodName,
               time: DateFormat('HH:mm').format(log.createdAt),
-              icon: "🖼️",
+              icon: "🍽️",
               kcal: log.caloriesKcal,
               protein: log.proteinG,
               carbs: log.carbsG,
               fat: log.fatG,
-              imageUrl: log.imageUrl ?? 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1000&auto=format&fit=crop',
+              imageUrl: log.imageUrl,
             ),
           ),
         );
+        if (result == true) {
+          _loadLogs();
+        }
       },
       child: Container(
         padding: const EdgeInsets.all(24),
@@ -314,7 +325,12 @@ class _MealDiaryScreenState extends State<MealDiaryScreen> with SingleTickerProv
             Container(
               height: 72, width: 72,
               decoration: BoxDecoration(color: isDark ? AppColors.deepSlate : AppColors.lightBackground, borderRadius: const BorderRadius.only(topLeft: Radius.circular(25), topRight: Radius.circular(15), bottomLeft: Radius.circular(10), bottomRight: Radius.circular(30))),
-              child: const Center(child: Text("🖼️", style: TextStyle(fontSize: 32))),
+              clipBehavior: Clip.antiAlias,
+              child: log.imageUrl == null
+                  ? const Center(child: Icon(LucideIcons.utensils, size: 28, color: Colors.white24))
+                  : (log.imageUrl!.startsWith('http') 
+                      ? Image.network(log.imageUrl!, fit: BoxFit.cover)
+                      : Image.file(File(log.imageUrl!), fit: BoxFit.cover)),
             ),
             const SizedBox(width: 20),
             Expanded(
